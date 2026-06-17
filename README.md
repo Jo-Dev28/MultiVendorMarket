@@ -234,46 +234,47 @@ text
 ---
 
 ## 🏗️ System Architecture
-+--------------------------------------------------+
-| PRESENTATION LAYER |
-| |
-| HTML | CSS | JavaScript | Bootstrap |
-+--------------------------------------------------+
-|
-v
-+--------------------------------------------------+
-| APPLICATION LAYER |
-| |
-| PHP Controllers | Form Processing |
-| Session Management | Authentication |
-| Authorization | Input Validation |
-+--------------------------------------------------+
-|
-v
-+--------------------------------------------------+
-| BUSINESS LOGIC LAYER |
-| |
-| Product Management | Order Processing |
-| Cart Management | Payment Processing |
-| Shipping Logic | AI Integration |
-+--------------------------------------------------+
-|
-v
-+--------------------------------------------------+
-| DATA ACCESS LAYER |
-| |
-| MySQLi Queries | Prepared Statements |
-| Database Connection | Data Mapping |
-+--------------------------------------------------+
-|
-v
-+--------------------------------------------------+
-| DATABASE LAYER |
-| |
-| MySQL Database | Tables | Relationships |
-+--------------------------------------------------+
 
-text
+```
++--------------------------------------------------+
+|               PRESENTATION LAYER                 |
+|--------------------------------------------------|
+| HTML | CSS | JavaScript | Bootstrap              |
++--------------------------------------------------+
+                |
+                v
++--------------------------------------------------+
+|              APPLICATION LAYER                   |
+|--------------------------------------------------|
+| PHP Controllers | Form Processing               |
+| Session Management | Authentication             |
+| Authorization | Input Validation                |
++--------------------------------------------------+
+                |
+                v
++--------------------------------------------------+
+|            BUSINESS LOGIC LAYER                 |
+|--------------------------------------------------|
+| Product Management | Order Processing           |
+| Cart Management | Payment Processing            |
+| Shipping Logic | AI Integration                 |
++--------------------------------------------------+
+                |
+                v
++--------------------------------------------------+
+|              DATA ACCESS LAYER                  |
+|--------------------------------------------------|
+| MySQLi Queries | Prepared Statements            |
+| Database Connection | Data Mapping              |
++--------------------------------------------------+
+                |
+                v
++--------------------------------------------------+
+|                DATABASE LAYER                   |
+|--------------------------------------------------|
+| MySQL Database | Tables | Relationships         |
++--------------------------------------------------+
+```
 
 ---
 
