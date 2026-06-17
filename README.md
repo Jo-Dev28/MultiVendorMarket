@@ -280,97 +280,79 @@ text
 
 ## 👥 User Flow
 
-### Customer Journey
+### 🛒 Customer Journey
+
+```
 Visit Website
-|
-v
-
+    |
+    v
 Browse Products / Search
-|
-v
-
+    |
+    v
 View Product Details
-|
-v
-
+    |
+    v
 Add to Cart / Wishlist
-|
-v
-
+    |
+    v
 Proceed to Checkout
-|
-v
-
+    |
+    v
 Enter Shipping Address
-|
-v
-
+    |
+    v
 Select Payment Method
-|
-v
-
+    |
+    v
 Place Order
-|
-v
-
+    |
+    v
 Receive Order Confirmation
-|
-v
-
+    |
+    v
 Track Order
-|
-v
-
+    |
+    v
 Receive Product
-|
-v
-
+    |
+    v
 Rate & Review Product
-
-text
-
-### Seller Journey
-Register as Customer
-|
-v
-
-Apply to Become Seller
-|
-v
-
-Wait for Verification
-|
-v
-
-Seller Dashboard Access
-|
-v
-
-Add Products
-|
-v
-
-Manage Orders
-|
-v
-
-Update Stock
-|
-v
-
-Chat with Customers
-|
-v
-
-View Analytics
-|
-v
-
-Withdraw Earnings
-
-text
+```
 
 ---
+
+### 🏪 Seller Journey
+
+```
+Register as Customer
+    |
+    v
+Apply to Become Seller
+    |
+    v
+Wait for Verification
+    |
+    v
+Seller Dashboard Access
+    |
+    v
+Add Products
+    |
+    v
+Manage Orders
+    |
+    v
+Update Stock
+    |
+    v
+Chat with Customers
+    |
+    v
+View Analytics
+    |
+    v
+Withdraw Earnings
+```
 
 ## 📥 Installation Guide
 
@@ -574,291 +556,243 @@ multi-vendor/
 ├── blog.php                        # Blog page
 └── .htaccess                       # Apache configuration
 
-👥 User Roles & Permissions
-Admin Permissions
-Permission	Description
-View Dashboard	View system statistics
-Manage Users	Create, edit, delete users
-Manage Sellers	Approve, reject sellers
-Manage Products	Approve, reject products
-Manage Categories	Create, edit, delete categories
-Manage Orders	View and manage all orders
-System Settings	Configure system settings
-Seller Permissions
-Permission	Description
-View Dashboard	View sales statistics
-Manage Products	Create, edit, delete own products
-Manage Orders	View and update order status
-Manage Stock	Update product inventory
-View Analytics	View sales analytics
-Chat Customers	Communicate with customers
-Customer Permissions
-Permission	Description
-Browse Products	View all products
-Search Products	Search for products
-Add to Cart	Add products to cart
-Add to Wishlist	Save products to wishlist
-Place Orders	Create new orders
-View Orders	View order history
-Track Orders	Track order status
-Review Products	Rate and review products
-AI Assistant	Use AI shopping assistant
-Update Profile	Manage personal information
 
-💳 Payment Flow
-text
-USER SELECTS PAYMENT METHOD
-         |
-         v
-CHOOSE PAYMENT TYPE
-   - M-Pesa
-   - Credit/Debit Card
-   - Bank Transfer
-   - PayPal
-         |
-         v
-ENTER PAYMENT DETAILS
-         |
-         v
-VALIDATE PAYMENT DETAILS
-         |
-         v
-PROCESS PAYMENT
-         |
-         v
-PAYMENT SUCCESS/FAILURE
-         |
-         v
-CREATE ORDER
-         |
-         v
-SEND CONFIRMATION
-         |
-         v
-UPDATE STOCK
-         |
-         v
-NOTIFY SELLER
+## 👥 User Roles & Permissions
 
-📦 Order Process
-text
-CUSTOMER PLACES ORDER
-         |
-         v
-ORDER CREATED (Status: Pending)
-         |
-         v
-PAYMENT PROCESSED
-         |
-         v
-ORDER CONFIRMED (Status: Processing)
-         |
-         v
-SELLER PROCESSES ORDER
-         |
-         v
-ORDER SHIPPED (Status: Shipped)
-         |
-         v
-CUSTOMER RECEIVES ORDER
-         |
-         v
-ORDER DELIVERED (Status: Delivered)
-         |
-         v
-CUSTOMER REVIEWS PRODUCT
+### 🛡️ Admin Permissions
 
-🤖 AI Assistant Explained
-How AI Works
-Question Detection: The system detects keywords in user questions
-
-Context Gathering: Collects relevant information from database
-
-Prompt Building: Creates a structured prompt for Gemini AI
-
-API Request: Sends to Google Gemini API
-
-Response Processing: Cleans and formats the response
-
-Display: Shows formatted response to user
-
-What AI Can Answer
-Category	Examples
-Product Search	"Show me laptops under 50k"
-Recommendations	"Best phone under 30,000 KSH"
-Shipping	"What is the shipping policy?"
-Payments	"What payment methods do you accept?"
-Sellers	"How do I become a seller?"
-Returns	"What is the return policy?"
-System	"Tell me about this platform"
-AI Response Example
-text
-User: "Show me laptops under 50,000 KSH"
-
-AI: "Here are some great laptops under 50,000 KSH:
-
-1. Dell XPS - 45,000 KSH
-   - Category: Laptops
-   - Seller: TechZone
-   - Rating: 4.5/5
-
-2. MacBook Air - 48,000 KSH
-   - Category: Laptops
-   - Seller: GadgetWorld
-   - Rating: 4.8/5
-
-3. HP Pavilion - 42,000 KSH
-   - Category: Laptops
-   - Seller: ComputerHub
-   - Rating: 4.2/5
-
-Would you like more details about any of these?"
-
-🛠️ Troubleshooting
-Common Issues & Solutions
-Issue	Solution
-Database Connection Error	Check database credentials in config.php
-AI Not Working	Verify Gemini API key in config.php
-Images Not Loading	Check uploads folder permissions
-Session Errors	Clear browser cookies and cache
-Login Issues	Check database for user records
-Cart Empty	Clear browser cache and try again
-Order Failed	Check payment processing logs
-Error Messages
-Error	Cause	Solution
-"Database connection failed"	Wrong DB credentials	Update config.php
-"Invalid API key"	Wrong Gemini key	Update API key
-"Access denied"	Permission issues	Check user role
-"File not found"	Missing file	Check file path
-"Upload failed"	Folder permissions	Set 777 permissions
-
-🤝 Contributing
-How to Contribute
-Fork the repository
-
-Create a feature branch
-
-Make your changes
-
-Test your changes
-
-Submit a pull request
-
-Coding Standards
-Follow PSR-12 coding standards
-
-Use prepared statements for SQL
-
-Sanitize all user inputs
-
-Add comments to your code
-
-Test before submitting
-
-📝 License
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-📧 Contact
-Developer: Jonathan Bosimwenda
-
-Email: josbosimwenda@gmail.com
-
-GitHub: Jo-Dev28
-
-Project: MultiVendorMarket
-
-🌟 Support
-If you find this project useful, please give it a ⭐ on GitHub!
-
-🎉 Thank You!
-Thank you for using Multi-Vendor Marketplace! We hope this documentation helps you understand and use the system effectively.
-
-Built with ❤️ by Jonathan Bosimwenda
-
-text
+| Permission | Description |
+|------------|-------------|
+| View Dashboard | View system statistics |
+| Manage Users | Create, edit, delete users |
+| Manage Sellers | Approve, reject sellers |
+| Manage Products | Approve, reject products |
+| Manage Categories | Create, edit, delete categories |
+| Manage Orders | View and manage all orders |
+| System Settings | Configure system settings |
 
 ---
 
-## 📁 Also Create `LICENSE` File
+### 🏪 Seller Permissions
 
-```markdown
+| Permission | Description |
+|------------|-------------|
+| View Dashboard | View sales statistics |
+| Manage Products | Create, edit, delete own products |
+| Manage Orders | View and update order status |
+| Manage Stock | Update product inventory |
+| View Analytics | View sales analytics |
+| Chat Customers | Communicate with customers |
+
+---
+
+### 🧑‍💼 Customer Permissions
+
+| Permission | Description |
+|------------|-------------|
+| Browse Products | View all products |
+| Search Products | Search for products |
+| Add to Cart | Add products to cart |
+| Add to Wishlist | Save products to wishlist |
+| Place Orders | Create new orders |
+| View Orders | View order history |
+| Track Orders | Track order status |
+| Review Products | Rate and review products |
+| AI Assistant | Use AI shopping assistant |
+| Update Profile | Manage personal information |
+
+---
+
+## 💳 Payment Flow
+
+```
+USER SELECTS PAYMENT METHOD
+        ↓
+CHOOSE PAYMENT TYPE
+  - M-Pesa
+  - Credit/Debit Card
+  - Bank Transfer
+  - PayPal
+        ↓
+ENTER PAYMENT DETAILS
+        ↓
+VALIDATE PAYMENT DETAILS
+        ↓
+PROCESS PAYMENT
+        ↓
+PAYMENT SUCCESS / FAILURE
+        ↓
+CREATE ORDER
+        ↓
+SEND CONFIRMATION
+        ↓
+UPDATE STOCK
+        ↓
+NOTIFY SELLER
+```
+
+---
+
+## 📦 Order Process
+
+```
+CUSTOMER PLACES ORDER
+        ↓
+ORDER CREATED (Status: Pending)
+        ↓
+PAYMENT PROCESSED
+        ↓
+ORDER CONFIRMED (Status: Processing)
+        ↓
+SELLER PROCESSES ORDER
+        ↓
+ORDER SHIPPED (Status: Shipped)
+        ↓
+CUSTOMER RECEIVES ORDER
+        ↓
+ORDER DELIVERED (Status: Delivered)
+        ↓
+CUSTOMER REVIEWS PRODUCT
+```
+
+---
+
+## 🤖 AI Assistant Explained
+
+### How AI Works
+
+- Question Detection → detects keywords in user input  
+- Context Gathering → fetches database info  
+- Prompt Building → creates AI prompt  
+- API Request → sends to Gemini API  
+- Response Processing → formats output  
+- Display → shows to user  
+
+---
+
+### What AI Can Answer
+
+| Category | Examples |
+|----------|----------|
+| Product Search | "Show me laptops under 50k" |
+| Recommendations | "Best phone under 30,000 KSH" |
+| Shipping | "Shipping policy?" |
+| Payments | "Payment methods?" |
+| Sellers | "How to become a seller?" |
+| Returns | "Return policy?" |
+| System | "What is this platform?" |
+
+---
+
+### AI Response Example
+
+```
+User: "Show me laptops under 50,000 KSH"
+
+AI:
+Here are some laptops under 50,000 KSH:
+
+1. Dell XPS - 45,000 KSH
+   Category: Laptops
+   Seller: TechZone
+   Rating: 4.5/5
+
+2. MacBook Air - 48,000 KSH
+   Category: Laptops
+   Seller: GadgetWorld
+   Rating: 4.8/5
+
+3. HP Pavilion - 42,000 KSH
+   Category: Laptops
+   Seller: ComputerHub
+   Rating: 4.2/5
+```
+
+---
+
+## 🛠️ Troubleshooting
+
+### Common Issues
+
+| Issue | Solution |
+|------|----------|
+| DB Connection Error | Check config.php credentials |
+| AI Not Working | Verify Gemini API key |
+| Images Not Loading | Fix uploads permissions |
+| Session Errors | Clear browser cache |
+| Login Issues | Check database users |
+| Cart Empty | Clear cache |
+| Order Failed | Check payment logs |
+
+---
+
+### Error Messages
+
+| Error | Cause | Solution |
+|------|------|----------|
+| Database connection failed | Wrong DB credentials | Fix config.php |
+| Invalid API key | Wrong Gemini key | Update API key |
+| Access denied | Permission issue | Check user role |
+| File not found | Missing file | Check path |
+| Upload failed | Folder permission | Set 777 |
+
+---
+
+## 🤝 Contributing
+
+- Fork repository  
+- Create feature branch  
+- Make changes  
+- Test code  
+- Submit pull request  
+
+---
+
+## 📧 Contact
+
+- Developer: Jonathan Bosimwenda  
+- Email: josbosimwenda@gmail.com  
+- GitHub: Jo-Dev28  
+- Project: MultiVendorMarket  
+
+---
+
+## 🌟 Support
+
+⭐ If you like this project, give it a star on GitHub!
+
+---
+
+## 🎉 Thank You
+
+Built with ❤️ using PHP, MySQL & Bootstrap.
+
+---
+
+## 📄 LICENSE
+
+```txt
 MIT License
 
 Copyright (c) 2024 Jonathan Bosimwenda
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+Permission is hereby granted...
+```
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+---
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+## 📁 .gitignore
 
-📁 Create .gitignore File
-text
-# Environment files
+```gitignore
 .env
 .env.local
-.env.*.local
-
-# Configuration files with sensitive data
 includes/config.php
-*.config.php
-
-# IDE files
+*.log
+node_modules/
+vendor/
+uploads/products/
 .idea/
 .vscode/
-*.swp
-*.swo
-*~
-
-# OS files
 .DS_Store
 Thumbs.db
-
-# Logs
-*.log
-error_log
-
-# Uploads
-uploads/products/
-uploads/temp/
-!uploads/placeholder.png
-!uploads/.htaccess
-
-# Cache
-cache/
-tmp/
-*.cache
-
-# Composer
-vendor/
-composer.lock
-
-# Node
-node_modules/
-package-lock.json
-
-# Build
-dist/
-build/
-
-# Test
-tests/_output/
-tests/_support/
-coverage/
-
-# Backup
-*.bak
-*.backup
-*.sql
+```
