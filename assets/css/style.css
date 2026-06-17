@@ -1,0 +1,43 @@
+:root {
+    color-scheme: dark;
+    --primary: #0d6efd;
+    --secondary: #6c757d;
+    --surface: #ffffff;
+    --surface-strong: #f8f9fa;
+    --shadow: 0 24px 48px rgba(15, 23, 42, 0.08);
+}
+body {
+    background: #eef2ff;
+    font-family: 'Inter', system-ui, sans-serif;
+}
+.hero {
+    min-height: 60vh;
+}
+.card {
+    border-radius: 1rem;
+}
+.btn-primary {
+    transition: transform .2s ease, box-shadow .2s ease;
+}
+.btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow);
+}
+.card img {
+    object-fit: cover;
+    max-height: 260px;
+}
+.bg-white {
+    background: rgba(255,255,255,0.95);
+    backdrop-filter: blur(10px);
+}
+.table th,
+.table td {
+    vertical-align: middle;
+}
+footer {
+    background: #020617;
+}
+::selection {
+    background: rgba(13, 110, 253, 0.2);
+}
