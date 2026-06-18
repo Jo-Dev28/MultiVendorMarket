@@ -651,8 +651,10 @@ $is_seller = ($user['role'] ?? '') === 'seller';
                 <li><a href="<?= BASE_URL ?>ai_assistant.php"><i class="fa-solid fa-robot"></i> AI Assistant</a></li>
                 <li><a href="<?= BASE_URL ?>sellers.php"><i class="fa-solid fa-shop"></i> Top Sellers</a></li>
                 <li><a href="<?= BASE_URL ?>blog.php"><i class="fa-solid fa-newspaper"></i> Blog</a></li>
-                <li><a href="<?= BASE_URL ?>about.php"><i class="fa-solid fa-info-circle"></i> About Us</a></li>
-                <li><a href="<?= BASE_URL ?>contact.php"><i class="fa-solid fa-headset"></i> Support</a></li>
+                <li><a href="<?= BASE_URL ?>about.php"><i class="fa-solid fa-info-circle"></i> About</a></li>
+                <li><a href="<?= BASE_URL ?>faq.php"><i class="fa-solid fa-question-circle"></i> FAQ</a></li>
+                <li><a href="<?= BASE_URL ?>contact.php"><i class="fa-solid fa-headset"></i> Contact</a></li>
+                <li><a href="<?= BASE_URL ?>support.php"><i class="fa-solid fa-headset"></i> Support</a></li>
             </ul>
         </div>
     </div>

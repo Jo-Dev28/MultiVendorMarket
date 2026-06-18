@@ -59,12 +59,10 @@ $relatedProducts = $related->get_result();
 $in_wishlist = false;
 $current_user = current_user();
 
-// Check session wishlist first
 if (isset($_SESSION['wishlist']) && in_array($id, $_SESSION['wishlist'])) {
     $in_wishlist = true;
 }
 
-// Also check database if logged in
 if ($current_user['id'] && !$in_wishlist) {
     $wishlist_sql = "SELECT id FROM wishlists WHERE user_id = ? AND product_id = ?";
     $stmt = $mysqli->prepare($wishlist_sql);
@@ -72,6 +70,14 @@ if ($current_user['id'] && !$in_wishlist) {
     $stmt->execute();
     $in_wishlist = $stmt->get_result()->num_rows > 0;
 }
+
+// Check if product has discount
+$has_discount = isset($product['is_on_sale']) && $product['is_on_sale'] == 1 && 
+                $product['discount_percent'] > 0 && 
+                !empty($product['discount_end_date']) && 
+                $product['discount_end_date'] > date('Y-m-d H:i:s');
+$discount_percent = $has_discount ? $product['discount_percent'] : 0;
+$discounted_price = $has_discount ? ($product['discounted_price'] ?? $product['price'] * (1 - $discount_percent / 100)) : 0;
 ?>
 
 <style>
@@ -183,11 +189,55 @@ if ($current_user['id'] && !$in_wishlist) {
         font-size: 0.9rem;
     }
     
+    /* Price with Discount */
+    .product-price-container {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        margin: 1rem 0;
+        flex-wrap: wrap;
+    }
+    
     .product-price {
         font-size: 2rem;
         font-weight: 700;
         color: var(--primary);
-        margin: 1rem 0;
+    }
+    
+    .product-price.discounted {
+        color: #ef4444;
+    }
+    
+    .product-original-price {
+        font-size: 1.2rem;
+        color: #9ca3af;
+        text-decoration: line-through;
+    }
+    
+    .product-save-badge {
+        font-size: 0.8rem;
+        background: #d1fae5;
+        color: #059669;
+        padding: 4px 14px;
+        border-radius: 50px;
+        font-weight: 700;
+    }
+    
+    .discount-badge-large {
+        display: inline-block;
+        background: #ef4444;
+        color: white;
+        padding: 6px 18px;
+        border-radius: 50px;
+        font-size: 0.9rem;
+        font-weight: 700;
+        animation: pulse 2s infinite;
+        margin-bottom: 0.5rem;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
     }
     
     .stock-status {
@@ -437,6 +487,7 @@ if ($current_user['id'] && !$in_wishlist) {
         .product-title { font-size: 1.3rem; }
         .main-image { height: 250px; }
         .action-buttons { flex-wrap: wrap; }
+        .product-price { font-size: 1.5rem; }
     }
 </style>
 
@@ -458,7 +509,6 @@ if ($current_user['id'] && !$in_wishlist) {
         <div class="col-lg-6">
             <div class="product-gallery">
                 <?php 
-                // Get first image
                 $first_image = null;
                 $images_array = [];
                 while ($img = $images->fetch_assoc()) {
@@ -518,8 +568,21 @@ if ($current_user['id'] && !$in_wishlist) {
                     <span>(<?= number_format($avg_rating, 1) ?>, <?= $rating_data['total_reviews'] ?> reviews)</span>
                 </div>
                 
-                <!-- Price -->
-                <div class="product-price">KSH <?= number_format($product['price']) ?></div>
+                <!-- Price with Discount -->
+                <?php if($has_discount): ?>
+                    <div class="discount-badge-large">
+                        <i class="fa-solid fa-bolt"></i> -<?= $discount_percent ?>% OFF
+                    </div>
+                    <div class="product-price-container">
+                        <span class="product-price discounted">KSH <?= number_format($discounted_price) ?></span>
+                        <span class="product-original-price">KSH <?= number_format($product['price']) ?></span>
+                        <span class="product-save-badge">Save <?= $discount_percent ?>%</span>
+                    </div>
+                <?php else: ?>
+                    <div class="product-price-container">
+                        <span class="product-price">KSH <?= number_format($product['price']) ?></span>
+                    </div>
+                <?php endif; ?>
                 
                 <!-- Stock Status -->
                 <?php if ($product['stock'] > 10): ?>
@@ -647,7 +710,6 @@ if ($current_user['id'] && !$in_wishlist) {
                     <div class="related-product-card" onclick="window.location.href='product.php?id=<?= $related['id'] ?>'">
                         <div class="related-product-image">
                             <?php 
-                            // Get first image for related product
                             $rel_img_sql = "SELECT filename FROM product_images WHERE product_id = {$related['id']} LIMIT 1";
                             $rel_img_result = $mysqli->query($rel_img_sql);
                             $rel_img = $rel_img_result ? $rel_img_result->fetch_assoc() : null;

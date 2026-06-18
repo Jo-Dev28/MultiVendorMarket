@@ -27,10 +27,12 @@ if (isset($_GET['delete'])) {
     
     // Get images to delete files
     $img_result = $mysqli->query("SELECT filename FROM product_images WHERE product_id = $product_id");
-    while ($img = $img_result->fetch_assoc()) {
-        $file_path = '../uploads/products/' . $img['filename'];
-        if (file_exists($file_path)) {
-            unlink($file_path);
+    if ($img_result) {
+        while ($img = $img_result->fetch_assoc()) {
+            $file_path = '../uploads/products/' . $img['filename'];
+            if (file_exists($file_path)) {
+                unlink($file_path);
+            }
         }
     }
     
@@ -100,9 +102,12 @@ $products_result = $mysqli->query("SELECT p.*, c.name as category_name
     .btn-view { background: #6c757d; color: white; }
     .btn-view:hover { background: #5a6268; color: white; }
     .search-input { padding: 8px 12px; border: 1px solid #ced4da; border-radius: 8px; width: 200px; }
-    .product-image { width: 50px; height: 50px; object-fit: cover; border-radius: 8px; border: 1px solid #e5e7eb; }
+    .product-image { width: 50px; height: 50px; object-fit: cover; border-radius: 8px; border: 1px solid #e5e7eb; background: #f3f4f6; }
     .product-image-placeholder { width: 50px; height: 50px; background: #f3f4f6; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #9ca3af; border: 1px dashed #d1d5db; }
+    .discount-badge-small { display: inline-block; background: #ef4444; color: white; padding: 2px 8px; border-radius: 50px; font-size: 0.6rem; font-weight: 700; margin-left: 4px; }
+    .hot-badge-small { display: inline-block; background: #f59e0b; color: white; padding: 2px 8px; border-radius: 50px; font-size: 0.6rem; font-weight: 700; margin-left: 4px; }
     @media (max-width: 992px) { .seller-wrapper { flex-direction: column; } .seller-sidebar { width: 100%; } }
+    @media (max-width: 768px) { .data-table { font-size: 0.8rem; } .data-table th, .data-table td { padding: 8px; } .product-image { width: 40px; height: 40px; } }
 </style>
 
 <div class="container-fluid">
@@ -143,6 +148,7 @@ $products_result = $mysqli->query("SELECT p.*, c.name as category_name
                             <th>Category</th>
                             <th>Price</th>
                             <th>Stock</th>
+                            <th>Discount</th>
                             <th>Status</th>
                             <th>Actions</th>
                         </tr>
@@ -153,44 +159,97 @@ $products_result = $mysqli->query("SELECT p.*, c.name as category_name
                             $image_result = $mysqli->query("SELECT filename FROM product_images WHERE product_id = {$product['id']} LIMIT 1");
                             $image = $image_result ? $image_result->fetch_assoc() : null;
                             $status_class = $product['status'] == 'approved' ? 'status-approved' : ($product['status'] == 'pending' ? 'status-pending' : 'status-rejected');
+                            
+                            // Check if product has discount
+                            $has_discount = isset($product['is_on_sale']) && $product['is_on_sale'] == 1 && 
+                                            $product['discount_percent'] > 0 && 
+                                            !empty($product['discount_end_date']) && 
+                                            $product['discount_end_date'] > date('Y-m-d H:i:s');
+                            $discount = $has_discount ? $product['discount_percent'] : 0;
                         ?>
                         <tr>
                             <td><?= $product['id'] ?></td>
                             <td>
-                                <?php if($image && !empty($image['filename'])): ?>
-                                    <img src="../uploads/products/<?= $image['filename'] ?>" 
-                                         class="product-image" 
-                                         alt="<?= htmlspecialchars($product['name']) ?>"
-                                         onerror="this.style.display='none'; this.parentElement.innerHTML='<div class=\'product-image-placeholder\'><i class=\'fa-solid fa-image\'></i></div>'">
+                                <?php if($image && !empty($image['filename'])): 
+                                    $has_file = file_exists('../uploads/products/' . $image['filename']);
+                                ?>
+                                    <?php if($has_file): ?>
+                                        <img src="../uploads/products/<?= $image['filename'] ?>" 
+                                             class="product-image" 
+                                             alt="<?= htmlspecialchars($product['name']) ?>"
+                                             loading="lazy">
+                                    <?php else: ?>
+                                        <div class="product-image-placeholder">
+                                            <i class="fa-solid fa-image"></i>
+                                        </div>
+                                    <?php endif; ?>
                                 <?php else: ?>
                                     <div class="product-image-placeholder">
                                         <i class="fa-solid fa-image"></i>
                                     </div>
                                 <?php endif; ?>
                             </td>
-                            <td><strong><?= htmlspecialchars($product['name']) ?></strong></td>
+                            <td>
+                                <strong><?= htmlspecialchars($product['name']) ?></strong>
+                                <?php if($has_discount): ?>
+                                    <span class="discount-badge-small">-<?= $discount ?>%</span>
+                                <?php endif; ?>
+                            </td>
                             <td><?= htmlspecialchars($product['category_name'] ?? '-') ?></td>
-                            <td>KSH <?= number_format($product['price']) ?></td>
+                            <td>
+                                <?php if($has_discount): ?>
+                                    <span style="color:#ef4444; font-weight:600;">KSH <?= number_format($product['discounted_price'] ?? ($product['price'] * (1 - $discount / 100))) ?></span>
+                                    <br>
+                                    <span style="text-decoration:line-through; color:#9ca3af; font-size:0.75rem;">KSH <?= number_format($product['price']) ?></span>
+                                <?php else: ?>
+                                    KSH <?= number_format($product['price']) ?>
+                                <?php endif; ?>
+                            </td>
                             <td><?= $product['stock'] ?></td>
+                            <td>
+                                <?php if($has_discount): ?>
+                                    <span class="discount-badge-small">-<?= $discount ?>%</span>
+                                    <br>
+                                    <small style="color:#6b7280; font-size:0.6rem;">
+                                        Ends: <?= date('M d', strtotime($product['discount_end_date'])) ?>
+                                    </small>
+                                <?php else: ?>
+                                    <span style="color:#6b7280; font-size:0.7rem;">No discount</span>
+                                <?php endif; ?>
+                            </td>
                             <td><span class="status-badge <?= $status_class ?>"><?= ucfirst($product['status']) ?></span></td>
                             <td>
-                                <div class="d-flex gap-1">
-                                    <a href="edit_product.php?id=<?= $product['id'] ?>" class="btn-sm btn-edit"><i class="fa-solid fa-edit"></i></a>
-                                    <a href="?delete=<?= $product['id'] ?>" class="btn-sm btn-delete" onclick="return confirm('Delete this product?')"><i class="fa-solid fa-trash"></i></a>
-                                    <a href="../product.php?id=<?= $product['id'] ?>" target="_blank" class="btn-sm btn-view"><i class="fa-solid fa-eye"></i></a>
+                                <div class="d-flex gap-1 flex-wrap">
+                                    <a href="edit_product.php?id=<?= $product['id'] ?>" class="btn-sm btn-edit" title="Edit Product">
+                                        <i class="fa-solid fa-edit"></i>
+                                    </a>
+                                    <a href="?delete=<?= $product['id'] ?>" class="btn-sm btn-delete" onclick="return confirm('Delete this product?')" title="Delete Product">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </a>
+                                    <a href="../product.php?id=<?= $product['id'] ?>" target="_blank" class="btn-sm btn-view" title="View Product">
+                                        <i class="fa-solid fa-eye"></i>
+                                    </a>
                                 </div>
                             </td>
                         </tr>
                         <?php endwhile; ?>
                         <?php else: ?>
-                        <tr><td colspan="8" class="text-center py-4">No products found. <a href="add_product.php">Add your first product</a></td></tr>
+                        <tr><td colspan="9" class="text-center py-4">No products found. <a href="add_product.php">Add your first product</a></td></tr>
                         <?php endif; ?>
                     </tbody>
                 </table>
             </div>
             
             <?php if($total_pages > 1): ?>
-            <nav class="mt-4"><ul class="pagination justify-content-center"><?php for($i=1;$i<=$total_pages;$i++): ?><li class="page-item <?= $i==$page?'active':'' ?>"><a class="page-link" href="?page=<?= $i ?>&search=<?= urlencode($search) ?>&status=<?= $status_filter ?>"><?= $i ?></a></li><?php endfor; ?></ul></nav>
+            <nav class="mt-4">
+                <ul class="pagination justify-content-center">
+                    <?php for($i=1;$i<=$total_pages;$i++): ?>
+                        <li class="page-item <?= $i==$page?'active':'' ?>">
+                            <a class="page-link" href="?page=<?= $i ?>&search=<?= urlencode($search) ?>&status=<?= $status_filter ?>"><?= $i ?></a>
+                        </li>
+                    <?php endfor; ?>
+                </ul>
+            </nav>
             <?php endif; ?>
         </div>
     </div>

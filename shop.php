@@ -218,18 +218,56 @@ $categories = $mysqli->query('SELECT c.*, COUNT(p.id) as product_count
         margin-top: 1.5rem;
     }
     
-    .price-inputs {
+    .price-range .price-inputs {
         display: flex;
         gap: 0.5rem;
         margin-top: 0.5rem;
+        align-items: center;
     }
     
-    .price-input {
+    .price-range .price-input {
         flex: 1;
-        padding: 0.5rem;
+        padding: 0.6rem 0.8rem;
         border: 1px solid var(--border);
         border-radius: 10px;
-        font-size: 0.8rem;
+        font-size: 0.85rem;
+        width: 100%;
+        transition: all 0.3s ease;
+    }
+    
+    .price-range .price-input:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+        outline: none;
+    }
+    
+    .price-range .price-input::placeholder {
+        color: #9ca3af;
+    }
+    
+    .price-range .price-separator {
+        color: var(--gray);
+        font-weight: 600;
+        padding: 0 2px;
+    }
+    
+    .price-range .btn-apply {
+        width: 100%;
+        padding: 0.6rem;
+        background: var(--secondary);
+        color: white;
+        border: none;
+        border-radius: 10px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        margin-top: 0.8rem;
+    }
+    
+    .price-range .btn-apply:hover {
+        background: var(--secondary-dark);
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(245,158,11,0.3);
     }
     
     .sort-bar {
@@ -317,6 +355,25 @@ $categories = $mysqli->query('SELECT c.*, COUNT(p.id) as product_count
         background: var(--danger);
     }
     
+    .product-discount-badge {
+        position: absolute;
+        top: 12px;
+        left: 12px;
+        background: #ef4444;
+        color: white;
+        padding: 4px 12px;
+        border-radius: 50px;
+        font-size: 0.7rem;
+        font-weight: 700;
+        z-index: 2;
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
+    }
+    
     .product-wishlist {
         position: absolute;
         top: 12px;
@@ -351,16 +408,32 @@ $categories = $mysqli->query('SELECT c.*, COUNT(p.id) as product_count
         font-size: 1rem;
     }
     
-    .product-image {
-        height: 220px;
-        object-fit: cover;
-        transition: transform 0.5s ease;
+    .product-image-container {
         width: 100%;
+        height: 220px;
         background: var(--light-gray);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        position: relative;
+    }
+    
+    .product-image {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        padding: 10px;
+        transition: transform 0.5s ease;
     }
     
     .product-card:hover .product-image {
         transform: scale(1.05);
+    }
+    
+    .product-image-placeholder {
+        font-size: 3rem;
+        color: #9ca3af;
     }
     
     .product-info {
@@ -426,11 +499,37 @@ $categories = $mysqli->query('SELECT c.*, COUNT(p.id) as product_count
         color: var(--gray);
     }
     
+    .product-price-container {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 0.75rem;
+        flex-wrap: wrap;
+    }
+    
     .product-price {
         font-size: 1.25rem;
         font-weight: 700;
         color: var(--primary);
-        margin-bottom: 0.75rem;
+    }
+    
+    .product-price.discounted {
+        color: #ef4444;
+    }
+    
+    .product-original-price {
+        font-size: 0.9rem;
+        color: #9ca3af;
+        text-decoration: line-through;
+    }
+    
+    .product-save-badge {
+        font-size: 0.7rem;
+        background: #d1fae5;
+        color: #059669;
+        padding: 2px 8px;
+        border-radius: 50px;
+        font-weight: 600;
     }
     
     .product-actions {
@@ -530,6 +629,9 @@ $categories = $mysqli->query('SELECT c.*, COUNT(p.id) as product_count
         .page-title {
             font-size: 1.5rem;
         }
+        .price-range .price-inputs {
+            flex-direction: row;
+        }
     }
 </style>
 
@@ -577,11 +679,11 @@ $categories = $mysqli->query('SELECT c.*, COUNT(p.id) as product_count
                         <?php endif; ?>
                         <div class="price-inputs">
                             <input type="number" name="min_price" class="price-input" placeholder="Min" value="<?= $min_price ?: '' ?>">
-                            <span style="align-self:center">-</span>
+                            <span class="price-separator">-</span>
                             <input type="number" name="max_price" class="price-input" placeholder="Max" value="<?= $max_price ?: '' ?>">
                         </div>
-                        <button type="submit" class="btn btn-primary btn-sm w-100 mt-2" style="background: var(--secondary); border-color: var(--secondary);">
-                            Apply Price
+                        <button type="submit" class="btn-apply">
+                            <i class="fa-solid fa-filter"></i> Apply Price
                         </button>
                     </form>
                 </div>
@@ -652,14 +754,21 @@ $categories = $mysqli->query('SELECT c.*, COUNT(p.id) as product_count
                 <div class="row g-4">
                     <?php while ($product = $products->fetch_assoc()): ?>
                         <?php 
-                        // Get product image - FIXED PATH
                         $image_result = $mysqli->query("SELECT filename FROM product_images WHERE product_id = {$product['id']} LIMIT 1");
                         $image = $image_result ? $image_result->fetch_assoc() : null;
+                        $has_image = $image && !empty($image['filename']) && file_exists('uploads/products/' . $image['filename']);
                         $in_wishlist = in_array($product['id'], $wishlist_products);
+                        
+                        // Check if product has discount
+                        $has_discount = $product['is_on_sale'] == 1 && $product['discount_percent'] > 0 && $product['discount_end_date'] > date('Y-m-d H:i:s');
+                        $discount_percent = $has_discount ? $product['discount_percent'] : 0;
+                        $discounted_price = $has_discount ? ($product['discounted_price'] ?? $product['price'] * (1 - $discount_percent / 100)) : 0;
                         ?>
                         <div class="col-md-6 col-xl-4">
                             <div class="product-card">
-                                <?php if($product['stock'] <= 5 && $product['stock'] > 0): ?>
+                                <?php if($has_discount): ?>
+                                    <div class="product-discount-badge">-<?= $discount_percent ?>% OFF</div>
+                                <?php elseif($product['stock'] <= 5 && $product['stock'] > 0): ?>
                                     <div class="product-badge low-stock">Low Stock</div>
                                 <?php elseif($product['stock'] > 0): ?>
                                     <div class="product-badge stock">In Stock</div>
@@ -670,11 +779,18 @@ $categories = $mysqli->query('SELECT c.*, COUNT(p.id) as product_count
                                     <i class="fa-<?= $in_wishlist ? 'solid' : 'regular' ?> fa-heart"></i>
                                 </div>
                                 
-                                <!-- FIXED: Changed from assets/uploads/ to uploads/products/ -->
-                                <img src="uploads/products/<?= sanitize($image['filename'] ?? 'placeholder.png') ?>" 
-                                     class="product-image" 
-                                     alt="<?= sanitize($product['name']) ?>"
-                                     onerror="this.src='uploads/placeholder.png'">
+                                <div class="product-image-container">
+                                    <?php if ($has_image): ?>
+                                        <img src="uploads/products/<?= sanitize($image['filename']) ?>" 
+                                             class="product-image" 
+                                             alt="<?= sanitize($product['name']) ?>"
+                                             loading="lazy">
+                                    <?php else: ?>
+                                        <div class="product-image-placeholder">
+                                            <i class="fa-solid fa-image"></i>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
                                 
                                 <div class="product-info">
                                     <div class="product-category">
@@ -706,8 +822,14 @@ $categories = $mysqli->query('SELECT c.*, COUNT(p.id) as product_count
                                         <span class="rating-value">(<?= number_format($rating, 1) ?>)</span>
                                     </div>
                                     
-                                    <div class="product-price">
-                                        KSH <?= number_format($product['price']) ?>
+                                    <div class="product-price-container">
+                                        <?php if($has_discount): ?>
+                                            <span class="product-price discounted">KSH <?= number_format($discounted_price) ?></span>
+                                            <span class="product-original-price">KSH <?= number_format($product['price']) ?></span>
+                                            <!-- <span class="product-save-badge">Save <?= $discount_percent ?>%</span> -->
+                                        <?php else: ?>
+                                            <span class="product-price">KSH <?= number_format($product['price']) ?></span>
+                                        <?php endif; ?>
                                     </div>
                                     
                                     <div class="product-actions">
@@ -736,7 +858,6 @@ function toggleWishlist(productId, element) {
     const isActive = element.classList.contains('active');
     const icon = element.querySelector('i');
     
-    // Show loading state
     Swal.fire({
         title: 'Processing...',
         allowOutsideClick: false,
@@ -758,7 +879,6 @@ function toggleWishlist(productId, element) {
         
         if (data.success) {
             if (data.added) {
-                // Added to wishlist - make button red
                 element.classList.add('active');
                 icon.className = 'fa-solid fa-heart';
                 Swal.fire({
@@ -769,7 +889,6 @@ function toggleWishlist(productId, element) {
                     showConfirmButton: false
                 });
             } else {
-                // Removed from wishlist - make button white
                 element.classList.remove('active');
                 icon.className = 'fa-regular fa-heart';
                 Swal.fire({

@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jun 17, 2026 at 11:49 AM
+-- Generation Time: Jun 17, 2026 at 06:11 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.0.30
 
@@ -156,7 +156,8 @@ CREATE TABLE `chats` (
 --
 
 INSERT INTO `chats` (`id`, `user_id`, `seller_id`, `message`, `sender`, `created_at`) VALUES
-(1, 4, 4, 'hi', 'user', '2026-06-15 22:35:00');
+(1, 4, 4, 'hi', 'user', '2026-06-15 22:35:00'),
+(2, 3, 4, 'ho', 'user', '2026-06-17 19:10:33');
 
 -- --------------------------------------------------------
 
@@ -194,7 +195,8 @@ CREATE TABLE `notifications` (
 --
 
 INSERT INTO `notifications` (`id`, `user_id`, `type`, `title`, `message`, `is_read`, `created_at`) VALUES
-(1, 3, 'chat', 'New Message', 'You have a new message from a customer.', 0, '2026-06-15 22:35:00');
+(1, 3, 'chat', 'New Message', 'You have a new message from a customer.', 0, '2026-06-15 22:35:00'),
+(2, 3, 'chat', 'New Message', 'You have a new message from a customer.', 0, '2026-06-17 19:10:33');
 
 -- --------------------------------------------------------
 
@@ -305,17 +307,22 @@ CREATE TABLE `products` (
   `status` enum('draft','pending','approved','rejected') NOT NULL DEFAULT 'pending',
   `rating` decimal(3,2) DEFAULT 0.00,
   `created_at` datetime NOT NULL,
-  `updated_at` datetime DEFAULT NULL
+  `updated_at` datetime DEFAULT NULL,
+  `discount_percent` int(11) DEFAULT 0 COMMENT 'Discount percentage (0-99)',
+  `discounted_price` decimal(12,2) DEFAULT NULL COMMENT 'Price after discount',
+  `discount_start_date` datetime DEFAULT NULL COMMENT 'When discount starts',
+  `discount_end_date` datetime DEFAULT NULL COMMENT 'When discount ends',
+  `is_on_sale` tinyint(1) DEFAULT 0 COMMENT '1 = on sale, 0 = not on sale'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `products`
 --
 
-INSERT INTO `products` (`id`, `seller_id`, `category_id`, `name`, `slug`, `short_description`, `description`, `price`, `stock`, `brand`, `status`, `rating`, `created_at`, `updated_at`) VALUES
-(1, 1, 1, 'Smartphone Pro', 'smartphone-pro', 'High-performance phone with excellent battery life.', 'A premium smartphone with a responsive display, long battery life and premium camera features.', 29999.00, 11, 'Galaxy', 'approved', 4.50, '2026-06-15 14:34:08', NULL),
-(2, 1, 2, 'Running Shoes', 'running-shoes', 'Lightweight shoes built for comfort and speed.', 'Durable and breathable running shoes designed for everyday training.', 6999.00, 24, 'Sprint', 'approved', 4.20, '2026-06-15 14:34:08', NULL),
-(3, 4, 1, 'Wireless Mouse', 'wireless-mouse-6a305222e3c12', 'ggggfgdrrddr', '0', 2000.00, 10, '0', 'approved', 0.00, '2026-06-15 22:27:30', NULL);
+INSERT INTO `products` (`id`, `seller_id`, `category_id`, `name`, `slug`, `short_description`, `description`, `price`, `stock`, `brand`, `status`, `rating`, `created_at`, `updated_at`, `discount_percent`, `discounted_price`, `discount_start_date`, `discount_end_date`, `is_on_sale`) VALUES
+(1, 4, 1, 'Smartphone Pro', 'smartphone-pro', 'High-performance phone with excellent battery life.', 'A premium smartphone with a responsive display, long battery life and premium camera features.', 29999.00, 11, 'Galaxy', 'approved', 4.50, '2026-06-15 14:34:08', NULL, 30, 20999.30, '2026-06-17 16:07:36', '2026-06-24 16:07:36', 1),
+(2, 1, 2, 'Running Shoes', 'running-shoes', 'Lightweight shoes built for comfort and speed.', 'Durable and breathable running shoes designed for everyday training.', 6999.00, 24, 'Sprint', 'approved', 4.20, '2026-06-15 14:34:08', NULL, 25, 5249.25, '2026-06-17 16:07:36', '2026-06-22 16:07:36', 1),
+(3, 4, 1, 'Wireless Mouse', 'wireless-mouse-6a305222e3c12', 'ggggfgdrrddr', 'hhjhuuuuuuuuuuuuuuuuuuuuuuuufffffffffffff', 2000.00, 10, '0', 'approved', 0.00, '2026-06-15 22:27:30', NULL, 30, 1400.00, '2026-06-17 16:41:44', '2026-06-20 16:41:44', 1);
 
 -- --------------------------------------------------------
 
@@ -386,7 +393,7 @@ CREATE TABLE `sellers` (
 
 INSERT INTO `sellers` (`id`, `user_id`, `shop_name`, `shop_logo`, `phone`, `business_id`, `id_image`, `description`, `location`, `status`, `subscription_status`, `subscription_expires`, `created_at`) VALUES
 (1, 2, 'Sample Seller', 'placeholder.png', '0722000000', 'ID123456', NULL, 'Trusted seller with quality products.', 'Nairobi', 'verified', 'active', NULL, '2026-06-15 14:34:08'),
-(4, 3, 'AquaVibe', NULL, '0999103233', 'OP1193645', 'seller_ids/img_6a3045e8495e07.50391289.jpg', 'jjjjjjjjjjjjjjjjjjjjjjjjyyyyyyyyyyyyyyyyyydddddddddddddddddddddddd', 'Nyayo Highrise Estate, Nyayo Highrise ward, Lang&#039;ata, Nairobi, Nairobi County, 00202, Kenya', 'verified', 'none', NULL, '2026-06-15 21:35:20');
+(4, 3, 'AquaVibe', 'img_6a32b5ef50ba67.55978965.jpeg', '0999103233', 'OP1193645', 'seller_ids/img_6a3045e8495e07.50391289.jpg', 'jjjjjjjjjjjjjjjjjjjjjjjjyyyyyyyyyyyyyyyyyydddddddddddddddddddddddd', 'Nyayo Highrise Estate, Nyayo Highrise ward, Lang&amp;#039;ata, Nairobi, Nairobi County, 00202, Kenya', 'verified', 'active', NULL, '2026-06-15 21:35:20');
 
 -- --------------------------------------------------------
 
@@ -413,6 +420,31 @@ CREATE TABLE `subscriptions` (
 INSERT INTO `subscriptions` (`id`, `seller_id`, `plan_name`, `amount`, `currency`, `status`, `starts_at`, `expires_at`, `created_at`) VALUES
 (1, 4, 'Pending Selection', 0.00, 'KSH', 'active', '2026-06-15', '2026-07-15', '2026-06-15 21:42:56'),
 (2, 1, 'Pending Selection', 0.00, 'KSH', 'pending', NULL, NULL, '2026-06-15 21:56:32');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `support_tickets`
+--
+
+CREATE TABLE `support_tickets` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) DEFAULT 0,
+  `subject` varchar(255) NOT NULL,
+  `category` varchar(50) NOT NULL,
+  `message` text NOT NULL,
+  `status` enum('open','in-progress','resolved','closed') DEFAULT 'open',
+  `admin_reply` text DEFAULT NULL,
+  `created_at` datetime NOT NULL,
+  `updated_at` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `support_tickets`
+--
+
+INSERT INTO `support_tickets` (`id`, `user_id`, `subject`, `category`, `message`, `status`, `admin_reply`, `created_at`, `updated_at`) VALUES
+(1, 3, 'Une reunion', 'account', 'gggggftytydtr', 'open', NULL, '2026-06-17 18:43:52', NULL);
 
 -- --------------------------------------------------------
 
@@ -444,7 +476,7 @@ CREATE TABLE `users` (
 INSERT INTO `users` (`id`, `name`, `email`, `password_hash`, `role`, `phone`, `address`, `email_verified`, `verification_token`, `reset_token`, `reset_expires`, `created_at`, `remember_token`, `remember_expires`) VALUES
 (1, 'Marketplace Admin', 'admin@marketplace.local', '$2y$10$JMLnTUbl16xdxme1wthDJ.KbxftRLbliV876fAY43yUAqYdRWwIAa', 'admin', NULL, NULL, 1, NULL, NULL, NULL, '2026-06-15 14:34:08', NULL, NULL),
 (2, 'Demo Customer', 'customer@marketplace.local', '$2y$10$JMLnTUbl16xdxme1wthDJ.KbxftRLbliV876fAY43yUAqYdRWwIAa', 'seller', NULL, NULL, 1, NULL, NULL, NULL, '2026-06-15 14:34:08', NULL, NULL),
-(3, 'Jonathan Bosimwenda', 'josbosimwenda@gmail.com', '$2y$10$RzkSLJcSeYcpcHAsUn/lbe515bw8F1VYcGxe.I3gLxcXw8kUnYAYG', 'seller', '0768062600', 'highrise', 1, 'f5fa2834a94fd9674ba9de5123c33ecd', NULL, NULL, '2026-06-15 15:30:09', NULL, NULL),
+(3, 'Jonathan Bosimwenda', 'josbosimwenda@gmail.com', '$2y$10$RzkSLJcSeYcpcHAsUn/lbe515bw8F1VYcGxe.I3gLxcXw8kUnYAYG', 'seller', '0999103233', 'highrise', 1, 'f5fa2834a94fd9674ba9de5123c33ecd', NULL, NULL, '2026-06-15 15:30:09', NULL, NULL),
 (4, 'Bilema Jon', 'josbosimwendaadmin@gmail.com', '$2y$10$gz1TiBFkC2.I/5a9iC8z9ed3QjBPbVVVksAqdKLDg2ie.YYvPGIOu', 'admin', '0851600109', 'highrise', 1, 'cc0bfe1a0074ec3b02e3f61528270768', NULL, NULL, '2026-06-15 18:51:43', NULL, NULL),
 (5, 'Jonathan Bosimwenda', 'josbosimwendacustomer@gmail.com', '$2y$10$tgWhDfKkeLg6ygfNyruAaezxXJfNXoEFVNTvVoq8wsVm0SENcD7SC', 'customer', '0851600109', 'highrise', 0, 'e53f53a3724d900e1e857a3e979f1584', NULL, NULL, '2026-06-16 14:37:00', NULL, NULL);
 
@@ -467,8 +499,7 @@ CREATE TABLE `wishlists` (
 
 INSERT INTO `wishlists` (`id`, `user_id`, `product_id`, `created_at`) VALUES
 (5, 3, 2, '2026-06-15 17:42:45'),
-(6, 3, 1, '2026-06-15 17:42:59'),
-(8, 3, 3, '2026-06-16 19:15:51');
+(6, 3, 1, '2026-06-15 17:42:59');
 
 --
 -- Indexes for dumped tables
@@ -594,6 +625,13 @@ ALTER TABLE `subscriptions`
   ADD KEY `seller_id` (`seller_id`);
 
 --
+-- Indexes for table `support_tickets`
+--
+ALTER TABLE `support_tickets`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `user_id` (`user_id`);
+
+--
 -- Indexes for table `users`
 --
 ALTER TABLE `users`
@@ -636,7 +674,7 @@ ALTER TABLE `categories`
 -- AUTO_INCREMENT for table `chats`
 --
 ALTER TABLE `chats`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `contacts`
@@ -648,7 +686,7 @@ ALTER TABLE `contacts`
 -- AUTO_INCREMENT for table `notifications`
 --
 ALTER TABLE `notifications`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `offers`
@@ -703,6 +741,12 @@ ALTER TABLE `sellers`
 --
 ALTER TABLE `subscriptions`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+
+--
+-- AUTO_INCREMENT for table `support_tickets`
+--
+ALTER TABLE `support_tickets`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `users`
