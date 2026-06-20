@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jun 17, 2026 at 06:11 PM
+-- Generation Time: Jun 18, 2026 at 01:15 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.0.30
 
@@ -147,7 +147,13 @@ CREATE TABLE `chats` (
   `user_id` int(11) NOT NULL,
   `seller_id` int(11) NOT NULL,
   `message` text NOT NULL,
+  `file_name` varchar(255) DEFAULT NULL,
+  `file_type` varchar(50) DEFAULT NULL,
+  `file_path` varchar(255) DEFAULT NULL,
+  `file_thumb` varchar(255) DEFAULT NULL,
+  `is_file` tinyint(1) DEFAULT 0,
   `sender` enum('user','seller','admin') NOT NULL,
+  `is_read` tinyint(1) DEFAULT 0,
   `created_at` datetime NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -155,9 +161,17 @@ CREATE TABLE `chats` (
 -- Dumping data for table `chats`
 --
 
-INSERT INTO `chats` (`id`, `user_id`, `seller_id`, `message`, `sender`, `created_at`) VALUES
-(1, 4, 4, 'hi', 'user', '2026-06-15 22:35:00'),
-(2, 3, 4, 'ho', 'user', '2026-06-17 19:10:33');
+INSERT INTO `chats` (`id`, `user_id`, `seller_id`, `message`, `file_name`, `file_type`, `file_path`, `file_thumb`, `is_file`, `sender`, `is_read`, `created_at`) VALUES
+(1, 4, 4, 'hi', NULL, NULL, NULL, NULL, 0, 'user', 1, '2026-06-15 22:35:00'),
+(2, 3, 4, 'ho', NULL, NULL, NULL, NULL, 0, 'user', 1, '2026-06-17 19:10:33'),
+(3, 3, 4, 'hey how are you?', NULL, NULL, NULL, NULL, 0, 'seller', 0, '2026-06-17 19:13:18'),
+(4, 4, 4, 'hi how are you doing ?', NULL, NULL, NULL, NULL, 0, 'seller', 0, '2026-06-17 19:14:12'),
+(5, 3, 1, 'Hi', NULL, NULL, NULL, NULL, 0, 'user', 0, '2026-06-18 12:45:42'),
+(6, 5, 4, 'Hi how are you can you please notify me when Iphone 15 pro will be availabe, with this number 0768062600 and also you laptops for good qualities, thank you and have a good day', NULL, NULL, NULL, NULL, 0, 'user', 1, '2026-06-18 12:53:37'),
+(7, 5, 4, 'Hi, i am good and that is fine i will notify you when they arrive', NULL, NULL, NULL, NULL, 0, 'seller', 1, '2026-06-18 12:55:44'),
+(8, 5, 1, 'hi', NULL, NULL, NULL, NULL, 0, 'user', 0, '2026-06-18 13:11:04'),
+(9, 5, 4, 'thank you sir', NULL, NULL, NULL, NULL, 0, 'user', 1, '2026-06-18 13:19:04'),
+(10, 5, 4, 'You are welcome', NULL, NULL, NULL, NULL, 0, 'seller', 1, '2026-06-18 13:27:35');
 
 -- --------------------------------------------------------
 
@@ -196,7 +210,15 @@ CREATE TABLE `notifications` (
 
 INSERT INTO `notifications` (`id`, `user_id`, `type`, `title`, `message`, `is_read`, `created_at`) VALUES
 (1, 3, 'chat', 'New Message', 'You have a new message from a customer.', 0, '2026-06-15 22:35:00'),
-(2, 3, 'chat', 'New Message', 'You have a new message from a customer.', 0, '2026-06-17 19:10:33');
+(2, 3, 'chat', 'New Message', 'You have a new message from a customer.', 0, '2026-06-17 19:10:33'),
+(3, 3, 'chat', 'New Message', 'You have a new message from seller.', 0, '2026-06-17 19:13:18'),
+(4, 4, 'chat', 'New Message', 'You have a new message from seller.', 0, '2026-06-17 19:14:12'),
+(5, 2, 'chat', 'New Message', 'You have a new message from a customer.', 0, '2026-06-18 12:45:42'),
+(6, 3, 'chat', 'New Message', 'You have a new message from a customer.', 0, '2026-06-18 12:53:37'),
+(7, 5, 'chat', 'New Message', 'You have a new message from seller.', 0, '2026-06-18 12:55:44'),
+(8, 2, 'chat', 'New Message', 'You have a new message from a customer.', 0, '2026-06-18 13:11:04'),
+(9, 3, 'chat', 'New Message', 'You have a new message from a customer.', 0, '2026-06-18 13:19:04'),
+(10, 5, 'chat', 'New Message', 'You have a new message from seller.', 0, '2026-06-18 13:27:35');
 
 -- --------------------------------------------------------
 
@@ -674,7 +696,7 @@ ALTER TABLE `categories`
 -- AUTO_INCREMENT for table `chats`
 --
 ALTER TABLE `chats`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT for table `contacts`
@@ -686,7 +708,7 @@ ALTER TABLE `contacts`
 -- AUTO_INCREMENT for table `notifications`
 --
 ALTER TABLE `notifications`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT for table `offers`

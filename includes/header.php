@@ -315,6 +315,9 @@ $is_seller = ($user['role'] ?? '') === 'seller';
             text-decoration: none;
             font-size: 0.85rem;
         }
+        .logout {
+            color: red;
+        }
         
         .custom-dropdown-menu a:hover {
             background: #eff6ff;
@@ -625,7 +628,7 @@ $is_seller = ($user['role'] ?? '') === 'seller';
                                         <a href="<?= BASE_URL ?>admin/dashboard.php"><i class="fa-solid fa-gear"></i> Admin Panel</a>
                                     <?php endif; ?>
                                     <hr>
-                                    <a href="<?= BASE_URL ?>logout.php" onclick="return confirmLogout()"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
+                                    <a href="<?= BASE_URL ?>logout.php" onclick="return confirmLogout()"><i class="fa-solid fa-right-from-bracket logout"></i> Logout</a>
                                 </div>
                             </div>
                         <?php endif; ?>

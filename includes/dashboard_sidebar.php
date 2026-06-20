@@ -7,51 +7,95 @@ $is_admin = ($user['role'] ?? '') === 'admin';
 $is_seller = ($user['role'] ?? '') === 'seller';
 $is_customer = ($user['role'] ?? '') === 'customer';
 
-// Get unread chat count for seller
+// Get unread chat count for seller and customer
 $unread_chats = 0;
-if ($is_seller && isset($_SESSION['user_id'])) {
-    // First check if chats table exists
+$unread_customer_messages = 0;
+
+if (isset($_SESSION['user_id'])) {
+    $user_id = $_SESSION['user_id'];
+    
+    // Check if chats table exists
     $table_check = $mysqli->query("SHOW TABLES LIKE 'chats'");
     if ($table_check && $table_check->num_rows > 0) {
-        // Get seller id
-        $seller_id_sql = "SELECT id FROM sellers WHERE user_id = ?";
-        $seller_id_stmt = $mysqli->prepare($seller_id_sql);
-        if ($seller_id_stmt) {
-            $seller_id_stmt->bind_param('i', $_SESSION['user_id']);
-            $seller_id_stmt->execute();
-            $seller_id_result = $seller_id_stmt->get_result();
-            if ($seller_id_result && $seller_id_result->num_rows > 0) {
-                $seller_data = $seller_id_result->fetch_assoc();
-                $seller_id = $seller_data['id'];
-                
-                // Check if is_read column exists
-                $column_check = $mysqli->query("SHOW COLUMNS FROM chats LIKE 'is_read'");
-                if ($column_check && $column_check->num_rows > 0) {
-                    $chat_sql = "SELECT COUNT(*) as count FROM chats WHERE seller_id = ? AND is_read = 0";
-                    $chat_stmt = $mysqli->prepare($chat_sql);
-                    if ($chat_stmt) {
-                        $chat_stmt->bind_param('i', $seller_id);
-                        $chat_stmt->execute();
-                        $chat_result = $chat_stmt->get_result();
-                        if ($chat_result) {
-                            $unread_chats = $chat_result->fetch_assoc()['count'] ?? 0;
+        $column_check = $mysqli->query("SHOW COLUMNS FROM chats LIKE 'is_read'");
+        
+        if ($is_seller) {
+            // Get seller id
+            $seller_id_sql = "SELECT id FROM sellers WHERE user_id = ?";
+            $seller_id_stmt = $mysqli->prepare($seller_id_sql);
+            if ($seller_id_stmt) {
+                $seller_id_stmt->bind_param('i', $user_id);
+                $seller_id_stmt->execute();
+                $seller_id_result = $seller_id_stmt->get_result();
+                if ($seller_id_result && $seller_id_result->num_rows > 0) {
+                    $seller_data = $seller_id_result->fetch_assoc();
+                    $seller_id = $seller_data['id'];
+                    
+                    if ($column_check && $column_check->num_rows > 0) {
+                        $chat_sql = "SELECT COUNT(*) as count FROM chats WHERE seller_id = ? AND is_read = 0 AND sender = 'user'";
+                        $chat_stmt = $mysqli->prepare($chat_sql);
+                        if ($chat_stmt) {
+                            $chat_stmt->bind_param('i', $seller_id);
+                            $chat_stmt->execute();
+                            $chat_result = $chat_stmt->get_result();
+                            if ($chat_result) {
+                                $unread_chats = $chat_result->fetch_assoc()['count'] ?? 0;
+                            }
+                            $chat_stmt->close();
                         }
-                        $chat_stmt->close();
+                    } else {
+                        $chat_sql = "SELECT COUNT(*) as count FROM chats WHERE seller_id = ? AND sender = 'user'";
+                        $chat_stmt = $mysqli->prepare($chat_sql);
+                        if ($chat_stmt) {
+                            $chat_stmt->bind_param('i', $seller_id);
+                            $chat_stmt->execute();
+                            $chat_result = $chat_stmt->get_result();
+                            if ($chat_result) {
+                                $unread_chats = $chat_result->fetch_assoc()['count'] ?? 0;
+                            }
+                            $chat_stmt->close();
+                        }
                     }
                 }
+                $seller_id_stmt->close();
             }
-            $seller_id_stmt->close();
+        }
+        
+        if ($is_customer) {
+            if ($column_check && $column_check->num_rows > 0) {
+                $chat_sql = "SELECT COUNT(*) as count FROM chats WHERE user_id = ? AND is_read = 0 AND sender = 'seller'";
+                $chat_stmt = $mysqli->prepare($chat_sql);
+                if ($chat_stmt) {
+                    $chat_stmt->bind_param('i', $user_id);
+                    $chat_stmt->execute();
+                    $chat_result = $chat_stmt->get_result();
+                    if ($chat_result) {
+                        $unread_customer_messages = $chat_result->fetch_assoc()['count'] ?? 0;
+                    }
+                    $chat_stmt->close();
+                }
+            } else {
+                $chat_sql = "SELECT COUNT(*) as count FROM chats WHERE user_id = ? AND sender = 'seller'";
+                $chat_stmt = $mysqli->prepare($chat_sql);
+                if ($chat_stmt) {
+                    $chat_stmt->bind_param('i', $user_id);
+                    $chat_stmt->execute();
+                    $chat_result = $chat_stmt->get_result();
+                    if ($chat_result) {
+                        $unread_customer_messages = $chat_result->fetch_assoc()['count'] ?? 0;
+                    }
+                    $chat_stmt->close();
+                }
+            }
         }
     }
 }
 
 // Helper function to check if a link is active
 function is_active($link, $current_page, $current_path) {
-    if (strpos($link, 'seller/') !== false) {
-        // For seller pages, check if the current path contains the link
+    if (strpos($link, 'seller/') !== false || strpos($link, 'admin/') !== false) {
         return strpos($current_path, $link) !== false;
     }
-    // For other pages, match the filename
     return $current_page == basename($link);
 }
 ?>
@@ -131,6 +175,10 @@ function is_active($link, $current_page, $current_path) {
         color: #6b7280;
         transition: all 0.3s ease;
     }
+    .sidebar-menu-nav li a .logout {
+        
+        color: red;
+    }
     
     .sidebar-menu-nav li a:hover {
         background: #f3f4f6;
@@ -165,15 +213,20 @@ function is_active($link, $current_page, $current_path) {
         margin-left: auto;
     }
     
-    /* Chat Badge with Pulse Animation */
     .sidebar-badge-chat {
         background: #ef4444;
         color: white;
         font-size: 0.65rem;
-        padding: 2px 8px;
+        padding: 2px 10px;
         border-radius: 20px;
         margin-left: auto;
         animation: pulse 2s infinite;
+        font-weight: 700;
+        letter-spacing: 0.3px;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
     }
     
     @keyframes pulse {
@@ -181,7 +234,6 @@ function is_active($link, $current_page, $current_path) {
         50% { opacity: 0.6; }
     }
     
-    /* Small Badges for Menu Items */
     .badge-view {
         font-size: 0.6rem;
         background: #dbeafe;
@@ -209,7 +261,6 @@ function is_active($link, $current_page, $current_path) {
         margin-left: auto;
     }
     
-    /* Role Badges */
     .seller-badge-sidebar {
         background: linear-gradient(135deg, #f59e0b, #d97706);
         color: white;
@@ -256,255 +307,83 @@ function is_active($link, $current_page, $current_path) {
         <div class="user-name-sidebar"><?= sanitize($user['name'] ?? 'User') ?></div>
         <div class="user-email-sidebar"><?= sanitize($user['email'] ?? '') ?></div>
         <?php if ($is_seller): ?>
-            <div class="seller-badge-sidebar">
-                <i class="fa-solid fa-store"></i> Seller
-            </div>
+            <div class="seller-badge-sidebar"><i class="fa-solid fa-store"></i> Seller</div>
         <?php elseif ($is_admin): ?>
-            <div class="admin-badge-sidebar">
-                <i class="fa-solid fa-shield-hart"></i> Admin
-            </div>
+            <div class="admin-badge-sidebar"><i class="fa-solid fa-shield-hart"></i> Admin</div>
         <?php else: ?>
-            <div class="customer-badge-sidebar">
-                <i class="fa-regular fa-user"></i> Customer
-            </div>
+            <div class="customer-badge-sidebar"><i class="fa-regular fa-user"></i> Customer</div>
         <?php endif; ?>
     </div>
     
     <ul class="sidebar-menu-nav">
-        <!-- Common Menu Items for All Users -->
         <li>
             <a href="<?= BASE_URL ?>profile.php" class="<?= $current_page == 'profile.php' ? 'active' : '' ?>">
-                <i class="fa-regular fa-id-card"></i>
-                <span>My Profile</span>
+                <i class="fa-regular fa-id-card"></i><span>My Profile</span>
             </a>
         </li>
         
-        <!-- Customer Specific -->
         <?php if ($is_customer): ?>
-            <li>
-                <a href="<?= BASE_URL ?>orders.php" class="<?= $current_page == 'orders.php' ? 'active' : '' ?>">
-                    <i class="fa-solid fa-truck"></i>
-                    <span>My Orders</span>
-                </a>
-            </li>
-            
-            <li>
-                <a href="<?= BASE_URL ?>wishlist.php" class="<?= $current_page == 'wishlist.php' ? 'active' : '' ?>">
-                    <i class="fa-regular fa-heart"></i>
-                    <span>My Wishlist</span>
-                </a>
-            </li>
-            
-            <li>
-                <a href="<?= BASE_URL ?>cart.php">
-                    <i class="fa-solid fa-cart-shopping"></i>
-                    <span>Shopping Cart</span>
-                    <span class="sidebar-badge" id="sidebarCartCount">0</span>
-                </a>
-            </li>
-            
+            <li><a href="<?= BASE_URL ?>orders.php" class="<?= $current_page == 'orders.php' ? 'active' : '' ?>"><i class="fa-solid fa-truck"></i><span>My Orders</span></a></li>
+            <li><a href="<?= BASE_URL ?>wishlist.php" class="<?= $current_page == 'wishlist.php' ? 'active' : '' ?>"><i class="fa-regular fa-heart"></i><span>My Wishlist</span></a></li>
+            <li><a href="<?= BASE_URL ?>cart.php"><i class="fa-solid fa-cart-shopping"></i><span>Shopping Cart</span><span class="sidebar-badge" id="sidebarCartCount">0</span></a></li>
             <li class="sidebar-divider"></li>
-            
-            <li>
-                <a href="<?= BASE_URL ?>compare.php">
-                    <i class="fa-solid fa-chart-simple"></i>
-                    <span>Compare Products</span>
-                </a>
-            </li>
-            
-            <li>
-                <a href="<?= BASE_URL ?>ai_assistant.php">
-                    <i class="fa-solid fa-robot"></i>
-                    <span>AI Assistant</span>
-                </a>
-            </li>
-        
+            <li><a href="<?= BASE_URL ?>ai_assistant.php"><i class="fa-solid fa-robot"></i><span>AI Assistant</span></a></li>
             <li class="sidebar-divider"></li>
+            <li><a href="<?= BASE_URL ?>become-seller.php"><i class="fa-solid fa-store"></i><span>Become a Seller</span></a></li>
             <li>
-                <a href="<?= BASE_URL ?>become-seller.php">
-                    <i class="fa-solid fa-store"></i>
-                    <span>Become a Seller</span>
-                </a>
-            </li>
-        <?php endif; ?>
-        
-        <!-- Seller Specific -->
-        <?php if ($is_seller): ?>
-            <li class="sidebar-divider"></li>
-            
-            <!-- Seller Dashboard -->
-            <li>
-                <a href="<?= BASE_URL ?>seller/dashboard.php" class="<?= strpos($current_path, 'seller/dashboard.php') !== false ? 'active' : '' ?>">
-                    <i class="fa-solid fa-chart-line"></i>
-                    <span>Seller Dashboard</span>
-                </a>
-            </li>
-            
-            <!-- My Shop - View Shop -->
-            <li>
-                <a href="<?= BASE_URL ?>seller/my_shop.php" class="<?= strpos($current_path, 'seller/my_shop.php') !== false ? 'active' : '' ?>">
-                    <i class="fa-solid fa-store"></i>
-                    <span>My Shop</span>
-                    <span class="badge-view">View</span>
-                </a>
-            </li>
-            
-            <!-- Edit Shop -->
-            <!-- <li>
-                <a href="<?= BASE_URL ?>seller/edit_profile.php" class="<?= strpos($current_path, 'seller/edit_profile.php') !== false ? 'active' : '' ?>">
-                    <i class="fa-solid fa-pen-to-square"></i>
-                    <span>Edit Shop</span>
-                    <span class="badge-edit">Edit</span>
-                </a>
-            </li> -->
-            
-            <!-- Add Product -->
-            <li>
-                <a href="<?= BASE_URL ?>seller/add_product.php" class="<?= strpos($current_path, 'seller/add_product.php') !== false ? 'active' : '' ?>">
-                    <i class="fa-solid fa-plus-circle"></i>
-                    <span>Add New Product</span>
-                </a>
-            </li>
-            
-            <!-- Manage Products -->
-            <li>
-                <a href="<?= BASE_URL ?>seller/products.php" class="<?= strpos($current_path, 'seller/products.php') !== false ? 'active' : '' ?>">
-                    <i class="fa-solid fa-box"></i>
-                    <span>Manage Products</span>
-                </a>
-            </li>
-            
-            <!-- Seller Orders -->
-            <li>
-                <a href="<?= BASE_URL ?>seller/orders.php" class="<?= strpos($current_path, 'seller/orders.php') !== false ? 'active' : '' ?>">
-                    <i class="fa-solid fa-truck-fast"></i>
-                    <span>Seller Orders</span>
-                </a>
-            </li>
-            
-            <!-- Messages (Chat) -->
-            <li>
-                <a href="<?= BASE_URL ?>seller/chats.php" class="<?= strpos($current_path, 'seller/chats.php') !== false ? 'active' : '' ?>">
-                    <i class="fa-regular fa-message"></i>
-                    <span>Messages</span>
-                    <?php if ($unread_chats > 0): ?>
-                        <span class="sidebar-badge-chat"><?= $unread_chats ?> new</span>
+                <a href="<?= BASE_URL ?>chat.php" class="<?= strpos($current_path, 'chat.php') !== false ? 'active' : '' ?>">
+                    <i class="fa-regular fa-message"></i><span>Messages</span>
+                    <?php if ($unread_customer_messages > 0): ?>
+                        <span class="sidebar-badge-chat"><i class="fa-regular fa-circle"></i> <?= $unread_customer_messages ?> new</span>
                     <?php endif; ?>
                 </a>
             </li>
-            
-            <!-- Earnings -->
-            <li>
-                <a href="<?= BASE_URL ?>seller/earnings.php" class="<?= strpos($current_path, 'seller/earnings.php') !== false ? 'active' : '' ?>">
-                    <i class="fa-solid fa-coins"></i>
-                    <span>Earnings</span>
-                </a>
-            </li>
-            <li>
-                <a href="<?= BASE_URL ?>seller/subscription.php" class="<?= strpos($current_path, 'seller/subscriptions.php') !== false ? 'active' : '' ?>">
-                    <i class="fa-solid fa-calendar-check"></i>
-                <span>Subscription</span>
-                </a>
-            </li>
-            
-            <!-- Seller Manual -->
-            <li class="sidebar-divider"></li>
-            <li>
-                <a href="<?= BASE_URL ?>seller/manual.php" class="<?= strpos($current_path, 'seller/manual.php') !== false ? 'active' : '' ?>">
-                    <i class="fa-solid fa-book"></i>
-                    <span>Seller Manual</span>
-                    <span class="badge-guide">Guide</span>
-                </a>
-            </li>
-            
+            <li><a href="<?= BASE_URL ?>manual.php" class="<?= strpos($current_path, 'manual.php') !== false ? 'active' : '' ?>"><i class="fa-solid fa-book"></i><span>Seller Manual</span><span class="badge-guide">Guide</span></a></li>
         <?php endif; ?>
         
-        <!-- Admin Specific -->
+        <?php if ($is_seller): ?>
+            <li class="sidebar-divider"></li>
+            <li><a href="<?= BASE_URL ?>seller/dashboard.php" class="<?= strpos($current_path, 'seller/dashboard.php') !== false ? 'active' : '' ?>"><i class="fa-solid fa-chart-line"></i><span>Seller Dashboard</span></a></li>
+            <li><a href="<?= BASE_URL ?>seller/my_shop.php" class="<?= strpos($current_path, 'seller/my_shop.php') !== false ? 'active' : '' ?>"><i class="fa-solid fa-store"></i><span>My Shop</span><span class="badge-view">View</span></a></li>
+            <li><a href="<?= BASE_URL ?>seller/add_product.php" class="<?= strpos($current_path, 'seller/add_product.php') !== false ? 'active' : '' ?>"><i class="fa-solid fa-plus-circle"></i><span>Add New Product</span></a></li>
+            <li><a href="<?= BASE_URL ?>seller/products.php" class="<?= strpos($current_path, 'seller/products.php') !== false ? 'active' : '' ?>"><i class="fa-solid fa-box"></i><span>Manage Products</span></a></li>
+            <li><a href="<?= BASE_URL ?>seller/orders.php" class="<?= strpos($current_path, 'seller/orders.php') !== false ? 'active' : '' ?>"><i class="fa-solid fa-truck-fast"></i><span>Seller Orders</span></a></li>
+            <li>
+                <a href="<?= BASE_URL ?>seller/chats.php" class="<?= strpos($current_path, 'seller/chats.php') !== false ? 'active' : '' ?>">
+                    <i class="fa-regular fa-message"></i><span>Messages</span>
+                    <?php if ($unread_chats > 0): ?>
+                        <span class="sidebar-badge-chat"><i class="fa-regular fa-circle"></i> <?= $unread_chats ?> new</span>
+                    <?php endif; ?>
+                </a>
+            </li>
+            <li><a href="<?= BASE_URL ?>seller/earnings.php" class="<?= strpos($current_path, 'seller/earnings.php') !== false ? 'active' : '' ?>"><i class="fa-solid fa-coins"></i><span>Earnings</span></a></li>
+            <li><a href="<?= BASE_URL ?>seller/subscription.php" class="<?= strpos($current_path, 'seller/subscriptions.php') !== false ? 'active' : '' ?>"><i class="fa-solid fa-calendar-check"></i><span>Subscription</span></a></li>
+            <li class="sidebar-divider"></li>
+            <li><a href="<?= BASE_URL ?>seller/manual.php" class="<?= strpos($current_path, 'seller/manual.php') !== false ? 'active' : '' ?>"><i class="fa-solid fa-book"></i><span>Seller Manual</span><span class="badge-guide">Guide</span></a></li>
+        <?php endif; ?>
+        
         <?php if ($is_admin): ?>
             <li class="sidebar-divider"></li>
-            <li>
-                <a href="<?= BASE_URL ?>admin/dashboard.php" class="<?= strpos($current_path, 'admin/dashboard.php') !== false ? 'active' : '' ?>">
-                    <i class="fa-solid fa-gauge-high"></i>
-                    <span>Dashboard</span>
-                </a>
-            </li>
-            <li>
-                <a href="<?= BASE_URL ?>admin/users.php" class="<?= strpos($current_path, 'admin/users.php') !== false ? 'active' : '' ?>">
-                    <i class="fa-solid fa-users"></i>
-                    <span>Manage Users</span>
-                </a>
-            </li>
-            <li>
-                <a href="<?= BASE_URL ?>admin/sellers.php" class="<?= strpos($current_path, 'admin/sellers.php') !== false ? 'active' : '' ?>">
-                    <i class="fa-solid fa-store"></i>
-                    <span>Manage Sellers</span>
-                </a>
-            </li>
-            <li>
-                <a href="<?= BASE_URL ?>admin/products.php" class="<?= strpos($current_path, 'admin/products.php') !== false ? 'active' : '' ?>">
-                    <i class="fa-solid fa-box"></i>
-                    <span>Manage Products</span>
-                </a>
-            </li>
-            <li>
-                <a href="<?= BASE_URL ?>admin/categories.php" class="<?= strpos($current_path, 'admin/categories.php') !== false ? 'active' : '' ?>">
-                    <i class="fa-solid fa-folder"></i>
-                    <span>Categories</span>
-                </a>
-            </li>
-            <li>
-                <a href="<?= BASE_URL ?>admin/orders.php" class="<?= strpos($current_path, 'admin/orders.php') !== false ? 'active' : '' ?>">
-                    <i class="fa-solid fa-truck"></i>
-                    <span>All Orders</span>
-                </a>
-            </li>
-            <li>
-                <a href="<?= BASE_URL ?>admin/reviews.php" class="<?= strpos($current_path, 'admin/reviews.php') !== false ? 'active' : '' ?>">
-                    <i class="fa-solid fa-star"></i>
-                    <span>Reviews</span>
-                </a>
-            </li>
-            <li>
-                <a href="<?= BASE_URL ?>admin/payments.php" class="<?= strpos($current_path, 'admin/payments.php') !== false ? 'active' : '' ?>">
-                    <i class="fa-solid fa-credit-card"></i>
-                    <span>Payments</span>
-                </a>
-            </li>
-            <li>
-                <a href="<?= BASE_URL ?>admin/subscriptions.php" class="<?= strpos($current_path, 'admin/subscriptions.php') !== false ? 'active' : '' ?>">
-                    <i class="fa-solid fa-calendar-check"></i>
-                    <span>Subscriptions</span>
-                </a>
-            </li>
-            <li>
-                <a href="<?= BASE_URL ?>admin/offers.php" class="<?= strpos($current_path, 'admin/offers.php') !== false ? 'active' : '' ?>">
-                    <i class="fa-solid fa-tag"></i>
-                    <span>Offers & Coupons</span>
-                </a>
-            </li>
-            <li>
-                <a href="<?= BASE_URL ?>admin/settings.php" class="<?= strpos($current_path, 'admin/settings.php') !== false ? 'active' : '' ?>">
-                    <i class="fa-solid fa-gear"></i>
-                    <span>Settings</span>
-                </a>
-            </li>
+            <li><a href="<?= BASE_URL ?>admin/dashboard.php" class="<?= strpos($current_path, 'admin/dashboard.php') !== false ? 'active' : '' ?>"><i class="fa-solid fa-gauge-high"></i><span>Dashboard</span></a></li>
+            <li><a href="<?= BASE_URL ?>admin/users.php"><i class="fa-solid fa-users"></i><span>Manage Users</span></a></li>
+            <li><a href="<?= BASE_URL ?>admin/sellers.php"><i class="fa-solid fa-store"></i><span>Manage Sellers</span></a></li>
+            <li><a href="<?= BASE_URL ?>admin/products.php"><i class="fa-solid fa-box"></i><span>Manage Products</span></a></li>
+            <li><a href="<?= BASE_URL ?>admin/categories.php"><i class="fa-solid fa-folder"></i><span>Categories</span></a></li>
+            <li><a href="<?= BASE_URL ?>admin/orders.php"><i class="fa-solid fa-truck"></i><span>All Orders</span></a></li>
+            <li><a href="<?= BASE_URL ?>admin/reviews.php"><i class="fa-solid fa-star"></i><span>Reviews</span></a></li>
+            <li><a href="<?= BASE_URL ?>admin/payments.php"><i class="fa-solid fa-credit-card"></i><span>Payments</span></a></li>
+            <li><a href="<?= BASE_URL ?>admin/subscriptions.php"><i class="fa-solid fa-calendar-check"></i><span>Subscriptions</span></a></li>
+            <li><a href="<?= BASE_URL ?>admin/offers.php"><i class="fa-solid fa-tag"></i><span>Offers & Coupons</span></a></li>
+            <li><a href="<?= BASE_URL ?>admin/contacts.php"><i class="fa-solid fa-envelope"></i><span>Man contact messages</span></a></li>
+            <li><a href="<?= BASE_URL ?>admin/support.php"><i class="fa-solid fa-headset"></i><span>Manage Supports</span></a></li>
+            <li><a href="<?= BASE_URL ?>admin/chats.php"><i class="fa-solid fa-message"></i><span>Man Chats</span></a></li>
+            <li><a href="<?= BASE_URL ?>admin/ai_logs.php"><i class="fa-solid fa-robot"></i><span>Manage AI_Logs</span></a></li>
+            <li><a href="<?= BASE_URL ?>admin/settings.php"><i class="fa-solid fa-gear"></i><span>Settings</span></a></li>
         <?php endif; ?>
         
         <li class="sidebar-divider"></li>
-        
-        <li>
-            <a href="<?= BASE_URL ?>support.php" class="<?= $current_page == 'support.php' ? 'active' : '' ?>">
-                <i class="fa-regular fa-circle-question"></i>
-                <span>Help & Support</span>
-            </a>
-        </li>
-        
-        <li>
-            <a href="<?= BASE_URL ?>logout.php" onclick="return confirm('Are you sure you want to logout?')">
-                <i class="fa-solid fa-right-from-bracket"></i>
-                <span>Logout</span>
-            </a>
-        </li>
+        <li><a href="<?= BASE_URL ?>support.php" class="<?= $current_page == 'support.php' ? 'active' : '' ?>"><i class="fa-regular fa-circle-question"></i><span>Help & Support</span></a></li>
+        <li><a href="<?= BASE_URL ?>logout.php" onclick="return confirm('Are you sure you want to logout?')"><i class="fa-solid fa-right-from-bracket logout"></i><span>Logout</span></a></li>
     </ul>
 </div>
 
@@ -528,7 +407,36 @@ function updateSidebarCartCount() {
         .catch(error => console.error('Error:', error));
 }
 
+function checkNewMessages() {
+    const userId = <?= $_SESSION['user_id'] ?? 0 ?>;
+    if (userId > 0) {
+        fetch('<?= BASE_URL ?>api/check_new_messages.php')
+            .then(response => response.json())
+            .then(data => {
+                if (data.unread_count !== undefined) {
+                    const chatLinks = document.querySelectorAll('.sidebar-menu-nav li a[href*="chat"], .sidebar-menu-nav li a[href*="seller/chats"]');
+                    chatLinks.forEach(link => {
+                        const existingBadge = link.querySelector('.sidebar-badge-chat');
+                        if (existingBadge) {
+                            existingBadge.remove();
+                        }
+                        if (data.unread_count > 0) {
+                            const badge = document.createElement('span');
+                            badge.className = 'sidebar-badge-chat';
+                            badge.innerHTML = '<i class="fa-regular fa-circle"></i> ' + data.unread_count + ' new';
+                            link.appendChild(badge);
+                        }
+                    });
+                }
+            })
+            .catch(error => console.error('Error checking messages:', error));
+    }
+}
+
+setInterval(checkNewMessages, 30000);
+
 document.addEventListener('DOMContentLoaded', function() {
     updateSidebarCartCount();
+    setTimeout(checkNewMessages, 2000);
 });
 </script>

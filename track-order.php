@@ -41,7 +41,7 @@ if (!$order) {
     redirect('orders.php');
 }
 
-// Get order items
+// Get order items with product images
 $items_sql = "SELECT oi.*, p.name, p.slug, p.price as product_price,
               (SELECT filename FROM product_images WHERE product_id = p.id LIMIT 1) as image
               FROM order_items oi
@@ -52,12 +52,10 @@ $items_stmt->bind_param('i', $order_id);
 $items_stmt->execute();
 $order_items = $items_stmt->get_result();
 
-// Get tracking updates (this would come from a tracking table in production)
-// For now, we'll create a simple timeline based on order status
+// Get tracking updates
 function getStatusTimeline($order) {
     $timeline = [];
     
-    // Order placed
     $timeline[] = [
         'status' => 'Order Placed',
         'icon' => 'fa-cart-plus',
@@ -66,7 +64,6 @@ function getStatusTimeline($order) {
         'completed' => true
     ];
     
-    // Processing
     $timeline[] = [
         'status' => 'Processing',
         'icon' => 'fa-gear',
@@ -75,7 +72,6 @@ function getStatusTimeline($order) {
         'completed' => in_array($order['status'], ['processing', 'shipped', 'delivered'])
     ];
     
-    // Shipped
     $timeline[] = [
         'status' => 'Shipped',
         'icon' => 'fa-truck',
@@ -84,7 +80,6 @@ function getStatusTimeline($order) {
         'completed' => in_array($order['status'], ['shipped', 'delivered'])
     ];
     
-    // Delivered
     $timeline[] = [
         'status' => 'Delivered',
         'icon' => 'fa-check-circle',
@@ -155,6 +150,35 @@ $timeline = getStatusTimeline($order);
         display: flex;
         align-items: center;
         gap: 8px;
+    }
+    
+    .order-status {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 50px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    
+    .order-status.status-pending {
+        background: #fef3c7;
+        color: #92400e;
+    }
+    .order-status.status-processing {
+        background: #dbeafe;
+        color: #1e40af;
+    }
+    .order-status.status-shipped {
+        background: #d1fae5;
+        color: #065f46;
+    }
+    .order-status.status-delivered {
+        background: #10b981;
+        color: white;
+    }
+    .order-status.status-cancelled {
+        background: #fee2e2;
+        color: #991b1b;
     }
     
     .track-card {
@@ -272,11 +296,12 @@ $timeline = getStatusTimeline($order);
         opacity: 0.6;
     }
     
-    /* Order Items */
+    /* Order Items - FIXED with proper image display */
     .order-item {
         display: flex;
-        gap: 15px;
-        padding: 12px 0;
+        align-items: center;
+        gap: 20px;
+        padding: 15px 0;
         border-bottom: 1px solid #f3f4f6;
     }
     
@@ -285,32 +310,62 @@ $timeline = getStatusTimeline($order);
     }
     
     .order-item-image {
-        width: 70px;
-        height: 70px;
-        object-fit: cover;
-        border-radius: 10px;
+        width: 80px;
+        height: 80px;
+        flex-shrink: 0;
+        border-radius: 12px;
         background: #f3f4f6;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+    }
+    
+    .order-item-image img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    
+    .order-item-image .no-image {
+        font-size: 1.5rem;
+        color: #9ca3af;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+    }
+    
+    .order-item-image .no-image i {
+        font-size: 2rem;
+    }
+    
+    .order-item-image .no-image span {
+        font-size: 0.6rem;
     }
     
     .order-item-details {
         flex: 1;
+        min-width: 0;
     }
     
     .order-item-name {
         font-weight: 600;
         color: #1f2937;
-        margin-bottom: 2px;
+        margin-bottom: 4px;
     }
     
     .order-item-meta {
-        font-size: 0.8rem;
+        font-size: 0.85rem;
         color: #6b7280;
     }
     
     .order-item-price {
-        font-weight: 600;
+        font-weight: 700;
         color: #2563eb;
-        font-size: 0.9rem;
+        font-size: 1rem;
+        flex-shrink: 0;
+        text-align: right;
     }
     
     .order-summary-row {
@@ -371,6 +426,16 @@ $timeline = getStatusTimeline($order);
         border-left: 4px solid #f59e0b;
     }
     
+    .delivery-info.delivered {
+        background: #d1fae5;
+        border-left-color: #10b981;
+    }
+    
+    .delivery-info.cancelled {
+        background: #fee2e2;
+        border-left-color: #dc2626;
+    }
+    
     @media (max-width: 992px) {
         .track-wrapper {
             flex-direction: column;
@@ -383,12 +448,31 @@ $timeline = getStatusTimeline($order);
             gap: 5px;
         }
         .order-item {
-            flex-direction: column;
-            align-items: center;
-            text-align: center;
+            flex-wrap: wrap;
+        }
+        .order-item-price {
+            width: 100%;
+            text-align: left;
+            padding-left: 100px;
         }
         .timeline {
             padding-left: 30px;
+        }
+    }
+    
+    @media (max-width: 576px) {
+        .order-item-image {
+            width: 60px;
+            height: 60px;
+        }
+        .order-item-price {
+            padding-left: 80px;
+        }
+        .track-header {
+            padding: 20px;
+        }
+        .track-card {
+            padding: 15px;
         }
     }
 </style>
@@ -469,14 +553,14 @@ $timeline = getStatusTimeline($order);
                     <small class="text-muted">Your package is with the courier and will be delivered soon.</small>
                 </div>
                 <?php elseif ($order['status'] == 'delivered'): ?>
-                <div class="delivery-info" style="background: #d1fae5; border-left-color: #10b981;">
+                <div class="delivery-info delivered">
                     <i class="fa-solid fa-check-circle text-success"></i>
                     <strong class="text-success">Delivered!</strong>
                     <br>
                     <small class="text-muted">Your order has been successfully delivered. Thank you for shopping with us!</small>
                 </div>
                 <?php elseif ($order['status'] == 'cancelled'): ?>
-                <div class="delivery-info" style="background: #fee2e2; border-left-color: #dc2626;">
+                <div class="delivery-info cancelled">
                     <i class="fa-solid fa-times-circle text-danger"></i>
                     <strong class="text-danger">Order Cancelled</strong>
                     <br>
@@ -485,44 +569,105 @@ $timeline = getStatusTimeline($order);
                 <?php endif; ?>
             </div>
             
-            <!-- Order Items -->
+            <!-- Order Items - FIXED with proper product images -->
             <div class="track-card">
                 <h5 class="track-card-title"><i class="fa-solid fa-box"></i> Order Items</h5>
                 
-                <?php while ($item = $order_items->fetch_assoc()): ?>
+                <?php 
+                $has_items = false;
+                while ($item = $order_items->fetch_assoc()): 
+                    $has_items = true;
+                    $image_path = '';
+                    $image_exists = false;
+                    
+                    // Check if product has an image
+                    if (!empty($item['image'])) {
+                        $image_path = 'uploads/products/' . $item['image'];
+                        if (file_exists($image_path)) {
+                            $image_exists = true;
+                        }
+                    }
+                ?>
                     <div class="order-item">
-                        <div class="order-item-image" style="background: #f3f4f6; display: flex; align-items: center; justify-content: center;">
-                            <i class="fa-solid fa-image fa-2x text-muted"></i>
+                        <div class="order-item-image">
+                            <?php if ($image_exists): ?>
+                                <img src="<?= $image_path ?>" alt="<?= sanitize($item['name'] ?? 'Product') ?>">
+                            <?php else: ?>
+                                <div class="no-image">
+                                    <i class="fa-solid fa-box"></i>
+                                    <span>No image</span>
+                                </div>
+                            <?php endif; ?>
                         </div>
                         <div class="order-item-details">
-                            <div class="order-item-name"><?= sanitize($item['name'] ?? 'Product') ?></div>
-                            <div class="order-item-meta">Quantity: <?= $item['quantity'] ?></div>
+                            <div class="order-item-name">
+                                <?= sanitize($item['name'] ?? 'Product') ?>
+                            </div>
+                            <div class="order-item-meta">
+                                <span>Qty: <?= $item['quantity'] ?></span>
+                                <?php if (!empty($item['product_price']) && $item['product_price'] != $item['unit_price']): ?>
+                                    <span class="text-muted">(Original: KSH <?= number_format($item['product_price']) ?>)</span>
+                                <?php endif; ?>
+                            </div>
                         </div>
-                        <div class="order-item-price">KSH <?= number_format($item['unit_price']) ?></div>
+                        <div class="order-item-price">
+                            KSH <?= number_format($item['unit_price'] * $item['quantity']) ?>
+                        </div>
                     </div>
                 <?php endwhile; ?>
+                
+                <?php if (!$has_items): ?>
+                    <div class="text-center py-4 text-muted">
+                        <i class="fa-solid fa-box-open fa-2x mb-2" style="color: #d1d5db;"></i>
+                        <p>No items found for this order.</p>
+                    </div>
+                <?php endif; ?>
             </div>
             
             <!-- Order Summary -->
             <div class="track-card">
                 <h5 class="track-card-title"><i class="fa-solid fa-receipt"></i> Order Summary</h5>
                 
+                <?php 
+                // Calculate approximate breakdown
+                $total = $order['total_amount'];
+                $shipping = 250;
+                $tax_rate = 0.16;
+                $subtotal = round(($total - $shipping) / (1 + $tax_rate));
+                $tax = round($subtotal * $tax_rate);
+                $subtotal_plus_shipping = $subtotal + $shipping;
+                ?>
+                
                 <div class="order-summary-row">
                     <span>Subtotal</span>
-                    <span>KSH <?= number_format($order['total_amount'] - ($order['total_amount'] * 0.16) - 250) ?></span>
+                    <span>KSH <?= number_format($subtotal) ?></span>
                 </div>
                 <div class="order-summary-row">
                     <span>Shipping</span>
-                    <span>KSH 250</span>
+                    <span>KSH <?= number_format($shipping) ?></span>
                 </div>
                 <div class="order-summary-row">
                     <span>Tax (16% VAT)</span>
-                    <span>KSH <?= number_format($order['total_amount'] * 0.16) ?></span>
+                    <span>KSH <?= number_format($tax) ?></span>
                 </div>
                 <div class="order-summary-row order-summary-total">
-                    <span>Total</span>
-                    <span>KSH <?= number_format($order['total_amount']) ?></span>
+                    <span><strong>Total</strong></span>
+                    <span><strong>KSH <?= number_format($total) ?></strong></span>
                 </div>
+                
+                <?php if (!empty($order['payment_method'])): ?>
+                <div class="order-summary-row" style="border-top: 1px solid #e5e7eb; margin-top: 10px; padding-top: 10px;">
+                    <span>Payment Method</span>
+                    <span><?= sanitize($order['payment_method']) ?></span>
+                </div>
+                <?php endif; ?>
+                
+                <?php if (!empty($order['shipping_address'])): ?>
+                <div class="order-summary-row" style="border-top: 1px solid #e5e7eb; margin-top: 10px; padding-top: 10px;">
+                    <span>Shipping Address</span>
+                    <span style="text-align: right; max-width: 60%;"><?= nl2br(sanitize($order['shipping_address'])) ?></span>
+                </div>
+                <?php endif; ?>
             </div>
             
             <!-- Actions -->
@@ -543,21 +688,17 @@ $timeline = getStatusTimeline($order);
 // Auto-refresh tracking status every 30 seconds
 $(document).ready(function() {
     let refreshInterval = setInterval(function() {
-        // Only refresh if page is visible
         if (!document.hidden) {
             $.ajax({
                 url: window.location.href,
                 method: 'GET',
-                success: function(data) {
-                    // Update only the status section without full page reload
-                    // This is a simple approach - full page reload is simpler
+                success: function() {
                     location.reload();
                 }
             });
         }
-    }, 30000); // 30 seconds
+    }, 30000);
     
-    // Stop refreshing when page is hidden
     document.addEventListener('visibilitychange', function() {
         if (document.hidden) {
             clearInterval(refreshInterval);

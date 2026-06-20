@@ -57,9 +57,9 @@
             <div class="col-lg-4 col-md-6">
                 <h5 class="footer-title">Sell With Us</h5>
                 <ul class="footer-links">
-                    <li><a href="<?= BASE_URL ?>seller/register.php"><i class="fa-solid fa-chevron-right"></i> Become a Seller</a></li>
-                    <li><a href="<?= BASE_URL ?>seller/login.php"><i class="fa-solid fa-chevron-right"></i> Seller Login</a></li>
-                    <li><a href="<?= BASE_URL ?>seller/dashboard.php"><i class="fa-solid fa-chevron-right"></i> Seller Dashboard</a></li>
+                    <li><a href="<?= BASE_URL ?>become-seller.php"><i class="fa-solid fa-chevron-right"></i> Become a Seller</a></li>
+                    <li><a href="<?= BASE_URL ?>login.php"><i class="fa-solid fa-chevron-right"></i> Login</a></li>
+                    <li><a href="<?= BASE_URL ?>profile.php"><i class="fa-solid fa-chevron-right"></i> My profile</a></li>
                 </ul>
                 <div class="footer-contact mt-3">
                     <p><i class="fa-solid fa-envelope"></i> <?= ADMIN_EMAIL ?></p>
