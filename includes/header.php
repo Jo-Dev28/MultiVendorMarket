@@ -23,6 +23,37 @@ if (!function_exists('sanitize')) {
 $user = current_user();
 $is_logged_in = ($user && isset($user['id']) && $user['id']);
 
+// ============================================
+// CHECK IF SELLER IS ACTIVE - BLOCK INACTIVE SELLERS
+// ============================================
+if ($is_logged_in && ($user['role'] ?? '') === 'seller') {
+    // Check if seller is active
+    $check_sql = "SELECT is_active FROM sellers WHERE user_id = ?";
+    $check_stmt = $mysqli->prepare($check_sql);
+    if ($check_stmt) {
+        $check_stmt->bind_param('i', $user['id']);
+        $check_stmt->execute();
+        $result = $check_stmt->get_result();
+        $seller_status = $result->fetch_assoc();
+        $check_stmt->close();
+        
+        // If seller is inactive (is_active = 0), logout and redirect
+        if ($seller_status && isset($seller_status['is_active']) && $seller_status['is_active'] == 0) {
+            // Clear session
+            $_SESSION = array();
+            session_destroy();
+            
+            // Set flash message
+            $_SESSION['flash_message'] = 'Your seller account has been deactivated. Please contact support for more information.';
+            $_SESSION['flash_type'] = 'danger';
+            
+            // Redirect to login
+            header('Location: ' . BASE_URL . 'login.php');
+            exit;
+        }
+    }
+}
+
 // Get cart count - only if logged in
 $cart_count = 0;
 if ($is_logged_in) {

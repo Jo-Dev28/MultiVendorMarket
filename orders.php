@@ -35,6 +35,58 @@ if (isset($_GET['cancel']) && isset($_GET['id'])) {
     redirect('orders.php');
 }
 
+// Handle review submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_review'])) {
+    if (!csrf_validate($_POST['csrf_token'] ?? '')) {
+        flash('Invalid security token.', 'danger');
+        redirect('orders.php');
+    }
+    
+    $order_id = intval($_POST['order_id'] ?? 0);
+    $product_id = intval($_POST['product_id'] ?? 0);
+    $rating = intval($_POST['rating'] ?? 0);
+    $comment = sanitize($_POST['comment'] ?? '');
+    
+    if ($product_id <= 0 || $rating < 1 || $rating > 5) {
+        flash('Please provide a valid rating.', 'danger');
+        redirect('orders.php');
+    }
+    
+    // Check if user already reviewed this product
+    $check_sql = "SELECT id FROM reviews WHERE user_id = ? AND product_id = ?";
+    $check_stmt = $mysqli->prepare($check_sql);
+    $check_stmt->bind_param('ii', $user_id, $product_id);
+    $check_stmt->execute();
+    $existing = $check_stmt->get_result()->fetch_assoc();
+    $check_stmt->close();
+    
+    if ($existing) {
+        // Update existing review
+        $update_sql = "UPDATE reviews SET rating = ?, comment = ?, updated_at = NOW() WHERE id = ?";
+        $update_stmt = $mysqli->prepare($update_sql);
+        $update_stmt->bind_param('isi', $rating, $comment, $existing['id']);
+        if ($update_stmt->execute()) {
+            flash('Review updated successfully!', 'success');
+        } else {
+            flash('Failed to update review.', 'danger');
+        }
+        $update_stmt->close();
+    } else {
+        // Insert new review
+        $insert_sql = "INSERT INTO reviews (user_id, product_id, rating, comment, status, created_at) 
+                       VALUES (?, ?, ?, ?, 'pending', NOW())";
+        $insert_stmt = $mysqli->prepare($insert_sql);
+        $insert_stmt->bind_param('iiis', $user_id, $product_id, $rating, $comment);
+        if ($insert_stmt->execute()) {
+            flash('Review submitted successfully! It will be visible after admin approval.', 'success');
+        } else {
+            flash('Failed to submit review.', 'danger');
+        }
+        $insert_stmt->close();
+    }
+    redirect('orders.php');
+}
+
 // Pagination
 $page = isset($_GET['page']) ? intval($_GET['page']) : 1;
 $limit = 5;
@@ -63,6 +115,24 @@ $stmt = $mysqli->prepare($sql);
 $stmt->bind_param('iii', $user_id, $limit, $offset);
 $stmt->execute();
 $orders = $stmt->get_result();
+
+// Get order items with review status for each
+function getOrderItemsWithReviewStatus($mysqli, $order_id, $user_id) {
+    $sql = "SELECT oi.*, p.name as product_name, p.id as product_id,
+            p.price as original_price,
+            p.discounted_price,
+            p.is_on_sale,
+            p.discount_percent,
+            (SELECT id FROM reviews WHERE user_id = ? AND product_id = p.id LIMIT 1) as review_id,
+            (SELECT rating FROM reviews WHERE user_id = ? AND product_id = p.id LIMIT 1) as review_rating
+            FROM order_items oi
+            JOIN products p ON p.id = oi.product_id
+            WHERE oi.order_id = ?";
+    $stmt = $mysqli->prepare($sql);
+    $stmt->bind_param('iii', $user_id, $user_id, $order_id);
+    $stmt->execute();
+    return $stmt->get_result();
+}
 ?>
 
 <style>
@@ -248,10 +318,38 @@ $orders = $stmt->get_result();
         transform: translateY(-2px);
     }
     
-    .btn-cancel:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-        transform: none;
+    .btn-review {
+        padding: 8px 18px;
+        background: #f59e0b;
+        color: white;
+        border: none;
+        border-radius: 10px;
+        font-size: 0.8rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+    
+    .btn-review:hover {
+        background: #d97706;
+        transform: translateY(-2px);
+        color: white;
+    }
+    
+    .btn-reviewed {
+        padding: 8px 18px;
+        background: #d1fae5;
+        color: #059669;
+        border: none;
+        border-radius: 10px;
+        font-size: 0.8rem;
+        cursor: default;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
     }
     
     .btn-track {
@@ -275,7 +373,6 @@ $orders = $stmt->get_result();
         transform: translateY(-2px);
     }
     
-    /* Receipt Button */
     .btn-receipt {
         padding: 8px 18px;
         background: #10b981;
@@ -294,7 +391,6 @@ $orders = $stmt->get_result();
     .btn-receipt:hover {
         background: #059669;
         transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(16,185,129,0.3);
         color: white;
     }
     
@@ -499,6 +595,44 @@ $orders = $stmt->get_result();
         color: white;
     }
     
+    /* Review Stars */
+    .star-rating {
+        display: inline-flex;
+        gap: 4px;
+        cursor: pointer;
+    }
+    
+    .star-rating .star {
+        font-size: 1.5rem;
+        color: #d1d5db;
+        transition: all 0.2s ease;
+        cursor: pointer;
+        user-select: none;
+    }
+    
+    .star-rating .star.active {
+        color: #f59e0b;
+    }
+    
+    .star-rating .star:hover {
+        transform: scale(1.2);
+    }
+    
+    .rating-display {
+        display: inline-flex;
+        gap: 2px;
+        margin-left: 8px;
+    }
+    
+    .rating-display .star {
+        font-size: 0.9rem;
+        color: #d1d5db;
+    }
+    
+    .rating-display .star.active {
+        color: #f59e0b;
+    }
+    
     /* Pagination */
     .pagination {
         display: flex;
@@ -628,6 +762,18 @@ $orders = $stmt->get_result();
                     }
                     
                     $can_cancel = ($order['status'] == 'pending' || $order['status'] == 'processing');
+                    $can_review = ($order['status'] == 'delivered');
+                    
+                    // Check if user has reviewed any products in this order
+                    $has_reviewed = false;
+                    if ($can_review) {
+                        $review_check = $mysqli->query("SELECT r.id FROM reviews r 
+                                                        JOIN order_items oi ON oi.product_id = r.product_id 
+                                                        WHERE r.user_id = $user_id AND oi.order_id = {$order['id']} LIMIT 1");
+                        if ($review_check && $review_check->num_rows > 0) {
+                            $has_reviewed = true;
+                        }
+                    }
                 ?>
                     <div class="order-card">
                         <div class="order-header">
@@ -701,11 +847,22 @@ $orders = $stmt->get_result();
                                     </a>
                                 <?php endif; ?>
                                 
+                                <?php if ($can_review): ?>
+                                    <?php if ($has_reviewed): ?>
+                                        <span class="btn-reviewed">
+                                            <i class="fa-solid fa-check-circle"></i> Reviewed
+                                        </span>
+                                    <?php else: ?>
+                                        <button class="btn-review" onclick="openReviewModal(<?= $order['id'] ?>)">
+                                            <i class="fa-solid fa-star"></i> Review Products
+                                        </button>
+                                    <?php endif; ?>
+                                <?php endif; ?>
+                                
                                 <button class="btn-view" onclick="viewOrderDetails(<?= $order['id'] ?>)">
                                     <i class="fa-regular fa-eye"></i> View Details
                                 </button>
                                 
-                                <!-- Receipt Button -->
                                 <button class="btn-receipt" onclick="window.open('receipt.php?id=<?= $order['id'] ?>', '_blank')">
                                     <i class="fa-solid fa-receipt"></i> Receipt
                                 </button>
@@ -761,30 +918,96 @@ $orders = $stmt->get_result();
     </div>
 </div>
 
+<!-- Review Modal -->
+<div class="modal fade" id="reviewModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #f59e0b, #d97706);">
+                <h5 class="modal-title"><i class="fa-solid fa-star"></i> Review Products</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="reviewModalBody">
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script>
+// ============================================
+// VIEW ORDER DETAILS
+// ============================================
 function viewOrderDetails(orderId) {
     var modal = new bootstrap.Modal(document.getElementById('orderDetailsModal'));
     modal.show();
     
+    document.getElementById('orderDetailsBody').innerHTML = `
+        <div class="text-center py-4">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2 text-muted">Loading order details...</p>
+        </div>
+    `;
+    
     fetch('ajax/get_order_details.php?id=' + orderId)
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                return response.text().then(text => {
+                    throw new Error('Server returned: ' + response.status);
+                });
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.success) {
                 let productsHtml = '';
                 let subtotal = 0;
+                let totalDiscount = 0;
                 
                 if (data.items && data.items.length > 0) {
                     data.items.forEach(item => {
                         let itemTotal = item.quantity * item.unit_price;
                         subtotal += itemTotal;
+                        
+                        // Check if product had discount
+                        let discountHtml = '';
+                        let displayPrice = item.unit_price;
+                        if (item.is_on_sale == 1 && item.discounted_price && item.discounted_price < item.original_price) {
+                            discountHtml = `
+                                <span class="badge bg-danger ms-2">-${item.discount_percent || 0}%</span>
+                                <br>
+                                <small class="text-muted" style="text-decoration: line-through;">
+                                    KSH ${parseFloat(item.original_price).toLocaleString()}
+                                </small>
+                            `;
+                            totalDiscount += (item.original_price - item.unit_price) * item.quantity;
+                        }
+                        
                         productsHtml += `
                             <div class="modal-product-item">
                                 <div>
-                                    <div class="modal-product-name">${item.name || 'Product'}</div>
+                                    <div class="modal-product-name">
+                                        ${item.name || 'Product'}
+                                        ${item.is_on_sale == 1 && item.discounted_price ? 
+                                            `<span class="badge bg-danger ms-2">${item.discount_percent || 0}% OFF</span>` : ''}
+                                    </div>
                                     <div class="modal-product-meta">Qty: ${item.quantity}</div>
+                                    ${discountHtml}
                                 </div>
-                                <div class="modal-product-price">KSH ${parseFloat(item.unit_price).toLocaleString()}</div>
+                                <div>
+                                    <div class="modal-product-price">
+                                        KSH ${parseFloat(item.unit_price).toLocaleString()}
+                                    </div>
+                                    <div class="text-muted small">
+                                        Total: KSH ${(item.quantity * item.unit_price).toLocaleString()}
+                                    </div>
+                                </div>
                             </div>
                         `;
                     });
@@ -792,10 +1015,10 @@ function viewOrderDetails(orderId) {
                     productsHtml = '<div class="text-muted">No products found for this order.</div>';
                 }
                 
-                // Calculate shipping and tax
                 let shipping = 250;
                 let tax = parseFloat(data.order.total_amount) * 0.16;
                 let total = parseFloat(data.order.total_amount);
+                let originalTotal = subtotal + shipping + tax;
                 
                 document.getElementById('orderDetailsBody').innerHTML = `
                     <!-- Order Info -->
@@ -874,6 +1097,12 @@ function viewOrderDetails(orderId) {
                             <div class="modal-info-label">Subtotal</div>
                             <div class="modal-info-value">KSH ${subtotal.toLocaleString()}</div>
                         </div>
+                        ${totalDiscount > 0 ? `
+                        <div class="modal-info-row" style="color:#dc2626;">
+                            <div class="modal-info-label">Discount</div>
+                            <div class="modal-info-value">- KSH ${totalDiscount.toLocaleString()}</div>
+                        </div>
+                        ` : ''}
                         <div class="modal-info-row">
                             <div class="modal-info-label">Shipping</div>
                             <div class="modal-info-value">KSH ${shipping.toLocaleString()}</div>
@@ -886,6 +1115,11 @@ function viewOrderDetails(orderId) {
                             <span>Total</span>
                             <span>KSH ${total.toLocaleString()}</span>
                         </div>
+                        ${totalDiscount > 0 ? `
+                        <div class="text-success mt-2" style="font-size:0.85rem;">
+                            <i class="fa-solid fa-tag"></i> You saved KSH ${totalDiscount.toLocaleString()} with discounts!
+                        </div>
+                        ` : ''}
                     </div>
                     
                     <!-- Shipping Address -->
@@ -897,12 +1131,224 @@ function viewOrderDetails(orderId) {
                     </div>
                 `;
             } else {
-                document.getElementById('orderDetailsBody').innerHTML = `<div class="alert alert-danger">${data.message}</div>`;
+                document.getElementById('orderDetailsBody').innerHTML = `<div class="alert alert-danger">${data.message || 'Failed to load order details.'}</div>`;
             }
         })
         .catch(error => {
-            document.getElementById('orderDetailsBody').innerHTML = `<div class="alert alert-danger">Error loading order details.</div>`;
+            console.error('Error:', error);
+            document.getElementById('orderDetailsBody').innerHTML = `
+                <div class="alert alert-danger">
+                    Error loading order details. Please try again.
+                    <br><small class="text-muted">${error.message}</small>
+                </div>
+            `;
         });
+}
+
+// ============================================
+// REVIEW MODAL FUNCTIONS
+// ============================================
+let currentOrderId = 0;
+let selectedProductId = 0;
+let selectedRating = 0;
+
+function openReviewModal(orderId) {
+    currentOrderId = orderId;
+    var modal = new bootstrap.Modal(document.getElementById('reviewModal'));
+    modal.show();
+    
+    document.getElementById('reviewModalBody').innerHTML = `
+        <div class="text-center py-4">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2 text-muted">Loading products...</p>
+        </div>
+    `;
+    
+    fetch('ajax/get_order_products.php?order_id=' + orderId)
+        .then(response => {
+            if (!response.ok) {
+                return response.text().then(text => {
+                    throw new Error('Server returned: ' + response.status);
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success && data.products.length > 0) {
+                let html = `
+                    <p class="text-muted mb-3">Select a product and rate your experience:</p>
+                    <div class="list-group mb-3" id="productList">
+                `;
+                
+                data.products.forEach((product, index) => {
+                    const hasReview = product.review_id !== null;
+                    const reviewRating = product.review_rating || 0;
+                    const isOnSale = product.is_on_sale == 1 && product.discounted_price > 0;
+                    
+                    html += `
+                        <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" 
+                             onclick="selectProductForReview(${product.product_id}, this)"
+                             style="cursor:pointer; ${index === 0 && !hasReview ? 'background:#fef3c7; border-color:#f59e0b;' : ''}">
+                            <div>
+                                <strong>${product.product_name}</strong>
+                                ${isOnSale ? `<span class="badge bg-danger ms-2">🔥 SALE</span>` : ''}
+                                <div class="text-muted small">Qty: ${product.quantity}</div>
+                            </div>
+                            <div>
+                                ${hasReview ? `
+                                    <span class="badge bg-success">
+                                        <i class="fa-solid fa-check"></i> Reviewed 
+                                        ${reviewRating > 0 ? '⭐'.repeat(reviewRating) : ''}
+                                    </span>
+                                ` : `
+                                    <span class="badge bg-warning">Pending Review</span>
+                                `}
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                html += '</div>';
+                
+                // Review form
+                html += `
+                    <form method="post" id="reviewForm">
+                        <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
+                        <input type="hidden" name="submit_review" value="1">
+                        <input type="hidden" name="order_id" value="${orderId}">
+                        <input type="hidden" name="product_id" id="reviewProductId" value="${data.products[0]?.product_id || ''}">
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Selected Product:</label>
+                            <p id="selectedProductName" class="text-muted">${data.products[0]?.product_name || 'Please select a product above'}</p>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Rating <span class="text-danger">*</span></label>
+                            <div>
+                                <div class="star-rating" id="starRating">
+                                    <span class="star" data-value="1" onclick="setRating(1)">⭐</span>
+                                    <span class="star" data-value="2" onclick="setRating(2)">⭐</span>
+                                    <span class="star" data-value="3" onclick="setRating(3)">⭐</span>
+                                    <span class="star" data-value="4" onclick="setRating(4)">⭐</span>
+                                    <span class="star" data-value="5" onclick="setRating(5)">⭐</span>
+                                </div>
+                                <input type="hidden" name="rating" id="ratingInput" value="0">
+                                <small class="text-muted" id="ratingText">Select a rating</small>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Review Comment</label>
+                            <textarea name="comment" class="form-control" rows="4" placeholder="Share your experience with this product..."></textarea>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-warning w-100" id="submitReviewBtn" ${!data.products[0] || data.products[0]?.review_id ? 'disabled' : ''}>
+                            ${!data.products[0] ? 'Select a product first' : (data.products[0]?.review_id ? 'Already Reviewed' : '<i class="fa-solid fa-paper-plane"></i> Submit Review')}
+                        </button>
+                    </form>
+                `;
+                
+                document.getElementById('reviewModalBody').innerHTML = html;
+                
+                // Auto-select first un-reviewed product
+                let firstUnreviewed = null;
+                data.products.forEach(p => {
+                    if (!p.review_id && !firstUnreviewed) {
+                        firstUnreviewed = p;
+                    }
+                });
+                
+                if (firstUnreviewed) {
+                    const items = document.querySelectorAll('.list-group-item');
+                    items.forEach((el, idx) => {
+                        if (idx === data.products.indexOf(firstUnreviewed)) {
+                            selectProductForReview(firstUnreviewed.product_id, el);
+                        }
+                    });
+                }
+            } else {
+                document.getElementById('reviewModalBody').innerHTML = `
+                    <div class="alert alert-info">
+                        <i class="fa-regular fa-circle-info"></i> 
+                        No products found for this order to review.
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            document.getElementById('reviewModalBody').innerHTML = `
+                <div class="alert alert-danger">
+                    Error loading products. Please try again.
+                    <br><small class="text-muted">${error.message}</small>
+                </div>
+            `;
+        });
+}
+
+function selectProductForReview(productId, element) {
+    // Highlight selected
+    document.querySelectorAll('.list-group-item').forEach(el => {
+        el.style.background = '';
+        el.style.borderColor = '';
+    });
+    if (element) {
+        element.style.background = '#fef3c7';
+        element.style.borderColor = '#f59e0b';
+    }
+    
+    selectedProductId = productId;
+    document.getElementById('reviewProductId').value = productId;
+    
+    // Get product name
+    const nameEl = element ? element.querySelector('strong') : null;
+    const name = nameEl ? nameEl.textContent : 'Selected Product';
+    document.getElementById('selectedProductName').textContent = name;
+    
+    // Enable submit if rating is selected
+    checkReviewForm();
+}
+
+function setRating(value) {
+    selectedRating = value;
+    document.getElementById('ratingInput').value = value;
+    
+    // Update stars
+    document.querySelectorAll('.star-rating .star').forEach(star => {
+        const starValue = parseInt(star.dataset.value);
+        if (starValue <= value) {
+            star.classList.add('active');
+        } else {
+            star.classList.remove('active');
+        }
+    });
+    
+    // Update text
+    const texts = ['', 'Poor', 'Fair', 'Good', 'Very Good', 'Excellent'];
+    document.getElementById('ratingText').textContent = texts[value] || 'Select a rating';
+    
+    checkReviewForm();
+}
+
+function checkReviewForm() {
+    const submitBtn = document.getElementById('submitReviewBtn');
+    const productId = document.getElementById('reviewProductId').value;
+    const rating = document.getElementById('ratingInput').value;
+    
+    if (productId && rating > 0) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Submit Review';
+    } else {
+        submitBtn.disabled = true;
+        if (!productId) {
+            submitBtn.innerHTML = 'Select a product first';
+        } else if (rating == 0) {
+            submitBtn.innerHTML = 'Select a rating';
+        }
+    }
 }
 
 // Auto-hide flash messages

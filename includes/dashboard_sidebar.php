@@ -374,10 +374,11 @@ function is_active($link, $current_page, $current_path) {
             <li><a href="<?= BASE_URL ?>admin/payments.php"><i class="fa-solid fa-credit-card"></i><span>Payments</span></a></li>
             <li><a href="<?= BASE_URL ?>admin/subscriptions.php"><i class="fa-solid fa-calendar-check"></i><span>Subscriptions</span></a></li>
             <li><a href="<?= BASE_URL ?>admin/offers.php"><i class="fa-solid fa-tag"></i><span>Offers & Coupons</span></a></li>
-            <li><a href="<?= BASE_URL ?>admin/contacts.php"><i class="fa-solid fa-envelope"></i><span>Man contact messages</span></a></li>
-            <li><a href="<?= BASE_URL ?>admin/support.php"><i class="fa-solid fa-headset"></i><span>Manage Supports</span></a></li>
+            <li><a href="<?= BASE_URL ?>admin/contacts.php"><i class="fa-solid fa-envelope"></i><span>Man Contact Messages</span></a></li>
+            <li><a href="<?= BASE_URL ?>admin/support.php"><i class="fa-solid fa-headset"></i><span>Manage Support Tickets</span></a></li>
+            <li><a href="<?= BASE_URL ?>admin/blog.php"><i class="fa-solid fa-blog"></i><span>Manage Blogs</span></a></li>
             <li><a href="<?= BASE_URL ?>admin/chats.php"><i class="fa-solid fa-message"></i><span>Man Chats</span></a></li>
-            <li><a href="<?= BASE_URL ?>admin/ai_logs.php"><i class="fa-solid fa-robot"></i><span>Manage AI_Logs</span></a></li>
+            <li><a href="<?= BASE_URL ?>admin/ai_logs.php"><i class="fa-solid fa-robot"></i><span>Man AI_Logs</span></a></li>
             <li><a href="<?= BASE_URL ?>admin/settings.php"><i class="fa-solid fa-gear"></i><span>Settings</span></a></li>
         <?php endif; ?>
         
@@ -407,31 +408,31 @@ function updateSidebarCartCount() {
         .catch(error => console.error('Error:', error));
 }
 
-function checkNewMessages() {
-    const userId = <?= $_SESSION['user_id'] ?? 0 ?>;
-    if (userId > 0) {
-        fetch('<?= BASE_URL ?>api/check_new_messages.php')
-            .then(response => response.json())
-            .then(data => {
-                if (data.unread_count !== undefined) {
-                    const chatLinks = document.querySelectorAll('.sidebar-menu-nav li a[href*="chat"], .sidebar-menu-nav li a[href*="seller/chats"]');
-                    chatLinks.forEach(link => {
-                        const existingBadge = link.querySelector('.sidebar-badge-chat');
-                        if (existingBadge) {
-                            existingBadge.remove();
-                        }
-                        if (data.unread_count > 0) {
-                            const badge = document.createElement('span');
-                            badge.className = 'sidebar-badge-chat';
-                            badge.innerHTML = '<i class="fa-regular fa-circle"></i> ' + data.unread_count + ' new';
-                            link.appendChild(badge);
-                        }
-                    });
-                }
-            })
-            .catch(error => console.error('Error checking messages:', error));
-    }
-}
+// function checkNewMessages() {
+//     const userId = <?= $_SESSION['user_id'] ?? 0 ?>;
+//     if (userId > 0) {
+//         fetch('<?= BASE_URL ?>api/check_new_messages.php')
+//             .then(response => response.json())
+//             .then(data => {
+//                 if (data.unread_count !== undefined) {
+//                     const chatLinks = document.querySelectorAll('.sidebar-menu-nav li a[href*="chat"], .sidebar-menu-nav li a[href*="seller/chats"]');
+//                     chatLinks.forEach(link => {
+//                         const existingBadge = link.querySelector('.sidebar-badge-chat');
+//                         if (existingBadge) {
+//                             existingBadge.remove();
+//                         }
+//                         if (data.unread_count > 0) {
+//                             const badge = document.createElement('span');
+//                             badge.className = 'sidebar-badge-chat';
+//                             badge.innerHTML = '<i class="fa-regular fa-circle"></i> ' + data.unread_count + ' new';
+//                             link.appendChild(badge);
+//                         }
+//                     });
+//                 }
+//             })
+//             .catch(error => console.error('Error checking messages:', error));
+//     }
+// }
 
 setInterval(checkNewMessages, 30000);
 

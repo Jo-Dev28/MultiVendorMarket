@@ -78,8 +78,9 @@ if (!$order) {
     }
 }
 
-// Get order items
-$items_sql = "SELECT oi.*, p.name, p.slug,
+// Get order items with discount info
+$items_sql = "SELECT oi.*, p.name, p.slug, p.price as original_price, 
+              p.discounted_price, p.is_on_sale, p.discount_percent,
               (SELECT filename FROM product_images WHERE product_id = p.id LIMIT 1) as image
               FROM order_items oi
               LEFT JOIN products p ON p.id = oi.product_id
@@ -89,12 +90,27 @@ $items_stmt->bind_param('i', $order_id);
 $items_stmt->execute();
 $items = $items_stmt->get_result();
 
-// Calculate totals
+// Calculate totals with discount detection
 $subtotal = 0;
+$total_discount = 0;
 $items_array = [];
 while ($item = $items->fetch_assoc()) {
-    $item['item_total'] = $item['quantity'] * $item['unit_price'];
+    // Check if this item had a discount
+    $has_discount = false;
+    $discount_amount = 0;
+    
+    if ($item['is_on_sale'] == 1 && $item['discounted_price'] > 0 && $item['discounted_price'] < $item['original_price']) {
+        $has_discount = true;
+        $discount_amount = ($item['original_price'] - $item['discounted_price']) * $item['quantity'];
+        $item['item_total'] = $item['quantity'] * $item['discounted_price'];
+    } else {
+        $item['item_total'] = $item['quantity'] * $item['unit_price'];
+    }
+    
+    $item['has_discount'] = $has_discount;
+    $item['discount_amount'] = $discount_amount;
     $subtotal += $item['item_total'];
+    $total_discount += $discount_amount;
     $items_array[] = $item;
 }
 
@@ -201,6 +217,35 @@ if ($is_admin) {
         color: #2563eb;
     }
     
+    .discount-badge {
+        display: inline-block;
+        background: #fee2e2;
+        color: #dc2626;
+        padding: 1px 10px;
+        border-radius: 12px;
+        font-size: 0.65rem;
+        font-weight: 600;
+        margin-left: 8px;
+    }
+    
+    .sale-price {
+        color: #dc2626;
+        font-weight: 600;
+    }
+    
+    .original-price {
+        text-decoration: line-through;
+        color: #9ca3af;
+        font-size: 0.8rem;
+        margin-right: 6px;
+    }
+    
+    .discount-saved {
+        color: #dc2626;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+    
     .receipt-summary {
         border-top: 2px solid #e5e7eb;
         padding-top: 20px;
@@ -211,6 +256,11 @@ if ($is_admin) {
         display: flex;
         justify-content: space-between;
         padding: 8px 0;
+    }
+    
+    .receipt-summary-row.discount-row {
+        color: #dc2626;
+        font-weight: 600;
     }
     
     .receipt-summary-row.total {
@@ -317,9 +367,11 @@ if ($is_admin) {
         text-transform: uppercase;
     }
     
-    .status-paid { background: #d1fae5; color: #059669; }
     .status-pending { background: #fef3c7; color: #d97706; }
-    .status-failed { background: #fee2e2; color: #dc2626; }
+    .status-processing { background: #dbeafe; color: #2563eb; }
+    .status-shipped { background: #e0e7ff; color: #4338ca; }
+    .status-delivered { background: #d1fae5; color: #059669; }
+    .status-cancelled { background: #fee2e2; color: #dc2626; }
     
     /* Admin Badge */
     .admin-badge {
@@ -454,7 +506,7 @@ if ($is_admin) {
         </div>
         <?php endif; ?>
         
-        <!-- Items Table -->
+        <!-- Items Table with Discounts -->
         <table class="receipt-table">
             <thead>
                 <tr>
@@ -472,24 +524,60 @@ if ($is_admin) {
                     </td>
                 </tr>
                 <?php else: ?>
-                <?php foreach ($items_array as $item): ?>
+                <?php foreach ($items_array as $item): 
+                    $item_name = htmlspecialchars($item['name'] ?? 'Product #' . $item['product_id']);
+                    $has_discount = $item['has_discount'] ?? false;
+                    $display_price = $has_discount ? $item['discounted_price'] : $item['unit_price'];
+                ?>
                 <tr>
-                    <td class="item-name"><?= htmlspecialchars($item['name'] ?? 'Product #' . $item['product_id']) ?></td>
+                    <td class="item-name">
+                        <?= $item_name ?>
+                        <?php if ($has_discount): ?>
+                            <span class="discount-badge"><?= $item['discount_percent'] ?? 0 ?>% OFF</span>
+                        <?php endif; ?>
+                        <?php if ($has_discount): ?>
+                            <br>
+                            <span class="original-price">KSH <?= number_format($item['original_price']) ?></span>
+                            <span class="sale-price">KSH <?= number_format($item['discounted_price']) ?></span>
+                        <?php endif; ?>
+                    </td>
                     <td style="text-align: center;"><?= $item['quantity'] ?></td>
-                    <td style="text-align: right;">KSH <?= number_format($item['unit_price']) ?></td>
-                    <td style="text-align: right; font-weight: 600; color: #2563eb;">KSH <?= number_format($item['item_total']) ?></td>
+                    <td style="text-align: right;">
+                        <?php if ($has_discount): ?>
+                            <span class="sale-price">KSH <?= number_format($display_price) ?></span>
+                        <?php else: ?>
+                            KSH <?= number_format($item['unit_price']) ?>
+                        <?php endif; ?>
+                    </td>
+                    <td style="text-align: right; font-weight: 600; color: #2563eb;">
+                        KSH <?= number_format($item['item_total']) ?>
+                        <?php if ($has_discount): ?>
+                            <br>
+                            <span class="discount-saved">
+                                <i class="fa-solid fa-tag"></i> Saved: KSH <?= number_format($item['discount_amount']) ?>
+                            </span>
+                        <?php endif; ?>
+                    </td>
                 </tr>
                 <?php endforeach; ?>
                 <?php endif; ?>
             </tbody>
         </table>
         
-        <!-- Summary -->
+        <!-- Summary with Discounts -->
         <div class="receipt-summary">
             <div class="receipt-summary-row">
                 <span class="label">Subtotal</span>
                 <span>KSH <?= number_format($subtotal) ?></span>
             </div>
+            
+            <?php if ($total_discount > 0): ?>
+            <div class="receipt-summary-row discount-row">
+                <span class="label">Total Discount</span>
+                <span>- KSH <?= number_format($total_discount) ?></span>
+            </div>
+            <?php endif; ?>
+            
             <div class="receipt-summary-row">
                 <span class="label">Shipping</span>
                 <span>KSH <?= number_format($shipping) ?></span>
@@ -498,10 +586,24 @@ if ($is_admin) {
                 <span class="label">Tax (16% VAT)</span>
                 <span>KSH <?= number_format($tax) ?></span>
             </div>
+            
+            <?php if ($total_discount > 0): ?>
+            <div class="receipt-summary-row" style="border-top: 1px solid #e5e7eb; padding-top: 12px; margin-top: 5px;">
+                <span class="label" style="font-weight: 600;">Subtotal after discount</span>
+                <span style="font-weight: 600;">KSH <?= number_format($subtotal) ?></span>
+            </div>
+            <?php endif; ?>
+            
             <div class="receipt-summary-row total">
                 <span class="label">Total</span>
                 <span>KSH <?= number_format($total) ?></span>
             </div>
+            
+            <?php if ($total_discount > 0): ?>
+            <div style="text-align: right; margin-top: 10px; color: #10b981; font-size: 0.85rem; font-weight: 600;">
+                <i class="fa-solid fa-tag"></i> You saved KSH <?= number_format($total_discount) ?> on this order!
+            </div>
+            <?php endif; ?>
         </div>
         
         <!-- Shipping Address -->

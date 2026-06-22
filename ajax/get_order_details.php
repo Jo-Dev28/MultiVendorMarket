@@ -1,71 +1,82 @@
 <?php
-session_start();
-require_once '../includes/config.php';
-require_once '../includes/functions.php';
+// Start output buffering
+ob_start();
+
+// Include header - correct path
+require_once '../includes/header.php';
+
+// Clear any output
+ob_clean();
 
 header('Content-Type: application/json');
 
 // Check if user is logged in
 if (!isset($_SESSION['user_id'])) {
-    echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+    echo json_encode(['success' => false, 'message' => 'Not logged in']);
     exit;
 }
 
 $order_id = intval($_GET['id'] ?? 0);
+$user_id = $_SESSION['user_id'];
 
-if (!$order_id) {
+if ($order_id == 0) {
     echo json_encode(['success' => false, 'message' => 'Invalid order ID']);
     exit;
 }
 
-// Get order details with seller info
-$order_sql = "SELECT o.*, u.name as customer_name,
-              s.id as seller_id, s.shop_name, s.location, s.phone, s.status as seller_status,
-              us.name as owner_name, us.email as seller_email
-              FROM orders o 
-              JOIN users u ON u.id = o.user_id 
-              LEFT JOIN sellers s ON s.id = o.seller_id
-              LEFT JOIN users us ON us.id = s.user_id
-              WHERE o.id = ? AND o.user_id = ?";
-$order_stmt = $mysqli->prepare($order_sql);
-$order_stmt->bind_param('ii', $order_id, $_SESSION['user_id']);
-$order_stmt->execute();
-$order = $order_stmt->get_result()->fetch_assoc();
+// Get order details
+$sql = "SELECT o.*, s.id as seller_id, s.shop_name, s.location, s.status as seller_status,
+        u.name as owner_name, u.email, u.phone
+        FROM orders o
+        LEFT JOIN sellers s ON o.seller_id = s.id
+        LEFT JOIN users u ON s.user_id = u.id
+        WHERE o.id = ? AND o.user_id = ?";
+$stmt = $mysqli->prepare($sql);
+if (!$stmt) {
+    echo json_encode(['success' => false, 'message' => 'Database error: ' . $mysqli->error]);
+    exit;
+}
+$stmt->bind_param('ii', $order_id, $user_id);
+$stmt->execute();
+$order = $stmt->get_result()->fetch_assoc();
+$stmt->close();
 
 if (!$order) {
     echo json_encode(['success' => false, 'message' => 'Order not found']);
     exit;
 }
 
-// Get order items
-$items_sql = "SELECT oi.*, p.name, p.slug,
-              (SELECT filename FROM product_images WHERE product_id = p.id LIMIT 1) as image
+// Get order items with discount info
+$items_sql = "SELECT oi.*, p.name, p.price as original_price, p.discounted_price, p.is_on_sale, p.discount_percent
               FROM order_items oi
               LEFT JOIN products p ON p.id = oi.product_id
               WHERE oi.order_id = ?";
 $items_stmt = $mysqli->prepare($items_sql);
+if (!$items_stmt) {
+    echo json_encode(['success' => false, 'message' => 'Database error: ' . $mysqli->error]);
+    exit;
+}
 $items_stmt->bind_param('i', $order_id);
 $items_stmt->execute();
-$items = $items_stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-
-// Build seller array
-$seller = null;
-if ($order['seller_id']) {
-    $seller = [
-        'id' => $order['seller_id'],
-        'shop_name' => $order['shop_name'] ?? null,
-        'location' => $order['location'] ?? null,
-        'phone' => $order['phone'] ?? null,
-        'status' => $order['seller_status'] ?? null,
-        'owner_name' => $order['owner_name'] ?? null,
-        'email' => $order['seller_email'] ?? null
-    ];
+$items_result = $items_stmt->get_result();
+$items = [];
+while ($row = $items_result->fetch_assoc()) {
+    $items[] = $row;
 }
+$items_stmt->close();
 
 echo json_encode([
     'success' => true,
     'order' => $order,
-    'items' => $items,
-    'seller' => $seller
+    'seller' => [
+        'id' => $order['seller_id'],
+        'shop_name' => $order['shop_name'],
+        'location' => $order['location'],
+        'status' => $order['seller_status'],
+        'owner_name' => $order['owner_name'],
+        'email' => $order['email'],
+        'phone' => $order['phone']
+    ],
+    'items' => $items
 ]);
 ?>

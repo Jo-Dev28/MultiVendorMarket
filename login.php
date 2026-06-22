@@ -30,13 +30,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $user = get_user_by_email($mysqli, $email);
         
         if ($user && password_verify($password, $user['password_hash'])) {
+            
             // ============================================
-            // IMPORTANT: Set ALL session variables
+            // CHECK IF SELLER IS ACTIVE - BLOCK INACTIVE SELLERS
+            // ============================================
+            if ($user['role'] === 'seller') {
+                $check_sql = "SELECT is_active FROM sellers WHERE user_id = ?";
+                $check_stmt = $mysqli->prepare($check_sql);
+                if ($check_stmt) {
+                    $check_stmt->bind_param('i', $user['id']);
+                    $check_stmt->execute();
+                    $result = $check_stmt->get_result();
+                    $seller_status = $result->fetch_assoc();
+                    $check_stmt->close();
+                    
+                    if ($seller_status && isset($seller_status['is_active']) && $seller_status['is_active'] == 0) {
+                        flash('Your seller account has been deactivated. Please contact support.', 'danger');
+                        redirect('login.php');
+                    }
+                }
+            }
+            
+            // ============================================
+            // SET ALL SESSION VARIABLES
             // ============================================
             $_SESSION['user_id'] = $user['id'];
-            $_SESSION['user_name'] = $user['name'];        // <-- THIS WAS MISSING
-            $_SESSION['user_email'] = $user['email'];      // <-- THIS WAS MISSING
-            $_SESSION['user_role'] = $user['role'];        // <-- THIS WAS MISSING
+            $_SESSION['user_name'] = $user['name'];
+            $_SESSION['user_email'] = $user['email'];
+            $_SESSION['user_role'] = $user['role'];
             $_SESSION['last_activity'] = time();
             
             // Remember me functionality
@@ -78,7 +99,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 ?>
 
-<!-- Rest of your login HTML stays the same -->
 <style>
     .login-container {
         min-height: 80vh;
@@ -377,7 +397,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <div class="demo-credentials" onclick="fillDemoCredentials()">
                             <p class="demo-title"><i class="fa-regular fa-lightbulb"></i> Demo Credentials (Click to fill)</p>
                             <p><strong>Admin:</strong> josbosimwendaadmin@gmail.com / 281220</p>
-                            <p><strong>seller:</strong> josbosimwenda@gmail.com / 281220</p>
+                            <p><strong>Seller:</strong> josbosimwenda@gmail.com / 281220</p>
                             <p><strong>Customer:</strong> josbosimwendacustomer@gmail.com / 281220</p>
                         </div>
                     </div>

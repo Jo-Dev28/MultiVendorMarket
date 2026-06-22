@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jun 18, 2026 at 01:15 PM
+-- Generation Time: Jun 20, 2026 at 09:11 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.0.30
 
@@ -111,7 +111,8 @@ CREATE TABLE `carts` (
 
 INSERT INTO `carts` (`id`, `user_id`, `product_id`, `quantity`, `created_at`) VALUES
 (14, 3, 3, 1, '2026-06-16 19:06:04'),
-(15, 3, 1, 1, '2026-06-16 22:10:15');
+(15, 3, 1, 1, '2026-06-16 22:10:15'),
+(16, 5, 3, 1, '2026-06-18 17:36:18');
 
 -- --------------------------------------------------------
 
@@ -147,12 +148,16 @@ CREATE TABLE `chats` (
   `user_id` int(11) NOT NULL,
   `seller_id` int(11) NOT NULL,
   `message` text NOT NULL,
+  `message_type` enum('text','receipt','product','image') DEFAULT 'text',
   `file_name` varchar(255) DEFAULT NULL,
   `file_type` varchar(50) DEFAULT NULL,
   `file_path` varchar(255) DEFAULT NULL,
   `file_thumb` varchar(255) DEFAULT NULL,
   `is_file` tinyint(1) DEFAULT 0,
+  `receipt_id` int(11) DEFAULT NULL,
+  `product_id` int(11) DEFAULT NULL,
   `sender` enum('user','seller','admin') NOT NULL,
+  `shared_by` enum('customer','seller','admin') DEFAULT 'customer',
   `is_read` tinyint(1) DEFAULT 0,
   `created_at` datetime NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -161,17 +166,50 @@ CREATE TABLE `chats` (
 -- Dumping data for table `chats`
 --
 
-INSERT INTO `chats` (`id`, `user_id`, `seller_id`, `message`, `file_name`, `file_type`, `file_path`, `file_thumb`, `is_file`, `sender`, `is_read`, `created_at`) VALUES
-(1, 4, 4, 'hi', NULL, NULL, NULL, NULL, 0, 'user', 1, '2026-06-15 22:35:00'),
-(2, 3, 4, 'ho', NULL, NULL, NULL, NULL, 0, 'user', 1, '2026-06-17 19:10:33'),
-(3, 3, 4, 'hey how are you?', NULL, NULL, NULL, NULL, 0, 'seller', 0, '2026-06-17 19:13:18'),
-(4, 4, 4, 'hi how are you doing ?', NULL, NULL, NULL, NULL, 0, 'seller', 0, '2026-06-17 19:14:12'),
-(5, 3, 1, 'Hi', NULL, NULL, NULL, NULL, 0, 'user', 0, '2026-06-18 12:45:42'),
-(6, 5, 4, 'Hi how are you can you please notify me when Iphone 15 pro will be availabe, with this number 0768062600 and also you laptops for good qualities, thank you and have a good day', NULL, NULL, NULL, NULL, 0, 'user', 1, '2026-06-18 12:53:37'),
-(7, 5, 4, 'Hi, i am good and that is fine i will notify you when they arrive', NULL, NULL, NULL, NULL, 0, 'seller', 1, '2026-06-18 12:55:44'),
-(8, 5, 1, 'hi', NULL, NULL, NULL, NULL, 0, 'user', 0, '2026-06-18 13:11:04'),
-(9, 5, 4, 'thank you sir', NULL, NULL, NULL, NULL, 0, 'user', 1, '2026-06-18 13:19:04'),
-(10, 5, 4, 'You are welcome', NULL, NULL, NULL, NULL, 0, 'seller', 1, '2026-06-18 13:27:35');
+INSERT INTO `chats` (`id`, `user_id`, `seller_id`, `message`, `message_type`, `file_name`, `file_type`, `file_path`, `file_thumb`, `is_file`, `receipt_id`, `product_id`, `sender`, `shared_by`, `is_read`, `created_at`) VALUES
+(1, 4, 4, 'hi', 'text', NULL, NULL, NULL, NULL, 0, NULL, NULL, 'user', 'customer', 1, '2026-06-15 22:35:00'),
+(2, 3, 4, 'ho', 'text', NULL, NULL, NULL, NULL, 0, NULL, NULL, 'user', 'customer', 1, '2026-06-17 19:10:33'),
+(3, 3, 4, 'hey how are you?', 'text', NULL, NULL, NULL, NULL, 0, NULL, NULL, 'seller', 'customer', 0, '2026-06-17 19:13:18'),
+(4, 4, 4, 'hi how are you doing ?', 'text', NULL, NULL, NULL, NULL, 0, NULL, NULL, 'seller', 'customer', 0, '2026-06-17 19:14:12'),
+(5, 3, 1, 'Hi', 'text', NULL, NULL, NULL, NULL, 0, NULL, NULL, 'user', 'customer', 0, '2026-06-18 12:45:42'),
+(6, 5, 4, 'Hi how are you can you please notify me when Iphone 15 pro will be availabe, with this number 0768062600 and also you laptops for good qualities, thank you and have a good day', 'text', NULL, NULL, NULL, NULL, 0, NULL, NULL, 'user', 'customer', 1, '2026-06-18 12:53:37'),
+(7, 5, 4, 'Hi, i am good and that is fine i will notify you when they arrive', 'text', NULL, NULL, NULL, NULL, 0, NULL, NULL, 'seller', 'customer', 1, '2026-06-18 12:55:44'),
+(8, 5, 1, 'hi', 'text', NULL, NULL, NULL, NULL, 0, NULL, NULL, 'user', 'customer', 0, '2026-06-18 13:11:04'),
+(9, 5, 4, 'thank you sir', 'text', NULL, NULL, NULL, NULL, 0, NULL, NULL, 'user', 'customer', 1, '2026-06-18 13:19:04'),
+(10, 5, 4, 'You are welcome', 'text', NULL, NULL, NULL, NULL, 0, NULL, NULL, 'seller', 'customer', 1, '2026-06-18 13:27:35'),
+(11, 5, 4, '📄 Order Receipt Shared\nOrder #: ORD-5A3F7A\nTotal: KSH 12,000.00\nStatus: Shipped', 'text', NULL, NULL, NULL, NULL, 0, NULL, NULL, 'user', 'customer', 1, '2026-06-18 14:43:58'),
+(12, 5, 4, '🧾 <strong>ORDER RECEIPT</strong>\n━━━━━━━━━━━━━━━━━━━━━━━━\n📋 Order #: ORD-5A3F7A\n📅 Date: 16 Jun 2026, 02:47 PM\n👤 Customer: Jonathan Bosimwenda\n🏪 Shop: AquaVibe\n━━━━━━━━━━━━━━━━━━━━━━━━\n📦 ITEMS:\n  • Wireless Mouse\n    Qty: 6 x KSH 2,000.00\n    Subtotal: KSH 12,000.00\n━━━━━━━━━━━━━━━━━━━━━━━━\n💰 TOTAL: KSH 12,000.00\n💳 Payment: M-Pesa\n📦 Status: SHIPPED\n━━━━━━━━━━━━━━━━━━━━━━━━\nThank you for shopping with us!', 'text', NULL, NULL, NULL, NULL, 0, NULL, NULL, 'user', 'customer', 1, '2026-06-18 14:49:51'),
+(13, 5, 4, '📸 Photo Shared\n📷 View photo: uploads/chat_photos/chat_1781784150_71a80b6acf31f794.jpg', 'text', NULL, NULL, NULL, NULL, 0, NULL, NULL, 'user', 'customer', 1, '2026-06-18 15:02:30'),
+(14, 5, 4, '🛍️ PRODUCT SHARED\n━━━━━━━━━━━━━━━━━━━━━━━━\n📦 Wireless Mouse\n💰 Price: KSH 1,400.00 🔥 ON SALE!\n📝 ggggfgdrrddr\n📊 Stock: 10 units\n━━━━━━━━━━━━━━━━━━━━━━━━\n🔗 View: product.php?id=3', 'text', NULL, NULL, NULL, NULL, 0, NULL, NULL, 'seller', 'customer', 1, '2026-06-18 15:10:23'),
+(15, 5, 4, 'thanks i have seen', 'text', NULL, NULL, NULL, NULL, 0, NULL, NULL, 'user', 'customer', 1, '2026-06-18 15:44:04');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `chat_receipts`
+--
+
+CREATE TABLE `chat_receipts` (
+  `id` int(11) NOT NULL,
+  `chat_id` int(11) NOT NULL,
+  `order_id` int(11) NOT NULL,
+  `receipt_file` varchar(255) DEFAULT NULL,
+  `receipt_number` varchar(50) DEFAULT NULL,
+  `shared_at` datetime NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `chat_shared_products`
+--
+
+CREATE TABLE `chat_shared_products` (
+  `id` int(11) NOT NULL,
+  `chat_id` int(11) NOT NULL,
+  `product_id` int(11) NOT NULL,
+  `shared_at` datetime NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -187,6 +225,13 @@ CREATE TABLE `contacts` (
   `message` text NOT NULL,
   `created_at` datetime NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `contacts`
+--
+
+INSERT INTO `contacts` (`id`, `name`, `email`, `subject`, `message`, `created_at`) VALUES
+(1, 'Jonathan Bosimwenda', 'Estherlakadia2@gmail.com', 'Complain', 'i want to ask about a product if i can find it here in the system and and how can i become a seller', '2026-06-18 16:47:14');
 
 -- --------------------------------------------------------
 
@@ -241,7 +286,7 @@ CREATE TABLE `offers` (
 --
 
 INSERT INTO `offers` (`id`, `code`, `description`, `discount_percent`, `expires_at`, `active`, `created_at`) VALUES
-(1, 'LAUNCH10', '10% off first order', 10, '2026-07-15', 0, '2026-06-15 14:34:08');
+(1, 'LAUNCH10', '10% off first order', 10, '2026-07-15', 1, '2026-06-15 14:34:08');
 
 -- --------------------------------------------------------
 
@@ -466,7 +511,8 @@ CREATE TABLE `support_tickets` (
 --
 
 INSERT INTO `support_tickets` (`id`, `user_id`, `subject`, `category`, `message`, `status`, `admin_reply`, `created_at`, `updated_at`) VALUES
-(1, 3, 'Une reunion', 'account', 'gggggftytydtr', 'open', NULL, '2026-06-17 18:43:52', NULL);
+(1, 3, 'Une reunion', 'account', 'gggggftytydtr', 'in-progress', 'sorry we are working on it', '2026-06-17 18:43:52', '2026-06-18 16:35:27'),
+(2, 0, 'iuiugi', 'payment', 'oikoiiuhuihui', 'open', NULL, '2026-06-18 17:27:55', NULL);
 
 -- --------------------------------------------------------
 
@@ -521,7 +567,8 @@ CREATE TABLE `wishlists` (
 
 INSERT INTO `wishlists` (`id`, `user_id`, `product_id`, `created_at`) VALUES
 (5, 3, 2, '2026-06-15 17:42:45'),
-(6, 3, 1, '2026-06-15 17:42:59');
+(6, 3, 1, '2026-06-15 17:42:59'),
+(9, 5, 3, '2026-06-18 15:55:46');
 
 --
 -- Indexes for dumped tables
@@ -557,6 +604,22 @@ ALTER TABLE `chats`
   ADD PRIMARY KEY (`id`),
   ADD KEY `user_id` (`user_id`),
   ADD KEY `seller_id` (`seller_id`);
+
+--
+-- Indexes for table `chat_receipts`
+--
+ALTER TABLE `chat_receipts`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `chat_id` (`chat_id`),
+  ADD KEY `order_id` (`order_id`);
+
+--
+-- Indexes for table `chat_shared_products`
+--
+ALTER TABLE `chat_shared_products`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `chat_id` (`chat_id`),
+  ADD KEY `product_id` (`product_id`);
 
 --
 -- Indexes for table `contacts`
@@ -684,7 +747,7 @@ ALTER TABLE `ai_logs`
 -- AUTO_INCREMENT for table `carts`
 --
 ALTER TABLE `carts`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
 
 --
 -- AUTO_INCREMENT for table `categories`
@@ -696,13 +759,25 @@ ALTER TABLE `categories`
 -- AUTO_INCREMENT for table `chats`
 --
 ALTER TABLE `chats`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
+
+--
+-- AUTO_INCREMENT for table `chat_receipts`
+--
+ALTER TABLE `chat_receipts`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `chat_shared_products`
+--
+ALTER TABLE `chat_shared_products`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `contacts`
 --
 ALTER TABLE `contacts`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `notifications`
@@ -768,7 +843,7 @@ ALTER TABLE `subscriptions`
 -- AUTO_INCREMENT for table `support_tickets`
 --
 ALTER TABLE `support_tickets`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `users`
@@ -780,7 +855,7 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `wishlists`
 --
 ALTER TABLE `wishlists`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
 -- Constraints for dumped tables

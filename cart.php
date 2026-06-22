@@ -8,6 +8,12 @@ $is_logged_in = ($current_user && isset($current_user['id']) && $current_user['i
 // Handle remove item
 if (isset($_GET['remove'])) {
     $product_id = intval($_GET['remove']);
+    $csrf_token = $_GET['csrf_token'] ?? '';
+    
+    if (!csrf_validate($csrf_token)) {
+        flash('Invalid security token.', 'danger');
+        redirect('cart.php');
+    }
     
     if ($is_logged_in) {
         // Remove from database
@@ -28,6 +34,11 @@ if (isset($_GET['remove'])) {
 
 // Handle update quantity
 if (isset($_POST['update_cart'])) {
+    if (!csrf_validate($_POST['csrf_token'] ?? '')) {
+        flash('Invalid security token.', 'danger');
+        redirect('cart.php');
+    }
+    
     if ($is_logged_in) {
         // Update database
         foreach ($_POST['quantity'] as $product_id => $quantity) {
@@ -64,6 +75,13 @@ if (isset($_POST['update_cart'])) {
 
 // Handle clear cart
 if (isset($_GET['clear'])) {
+    $csrf_token = $_GET['csrf_token'] ?? '';
+    
+    if (!csrf_validate($csrf_token)) {
+        flash('Invalid security token.', 'danger');
+        redirect('cart.php');
+    }
+    
     if ($is_logged_in) {
         $sql = "DELETE FROM carts WHERE user_id = ?";
         $stmt = $mysqli->prepare($sql);
@@ -77,6 +95,40 @@ if (isset($_GET['clear'])) {
     redirect('cart.php');
 }
 
+// Handle apply coupon (for future use)
+$discount_percent = 0;
+$discount_amount = 0;
+$coupon_code = '';
+
+if (isset($_POST['apply_coupon'])) {
+    $coupon_code = sanitize($_POST['coupon_code'] ?? '');
+    
+    if (!empty($coupon_code)) {
+        // Check if coupon exists (you can expand this)
+        $coupon_sql = "SELECT * FROM offers WHERE code = ? AND active = 1 AND expires_at >= CURDATE()";
+        $coupon_stmt = $mysqli->prepare($coupon_sql);
+        $coupon_stmt->bind_param('s', $coupon_code);
+        $coupon_stmt->execute();
+        $coupon = $coupon_stmt->get_result()->fetch_assoc();
+        $coupon_stmt->close();
+        
+        if ($coupon) {
+            $_SESSION['coupon_code'] = $coupon_code;
+            $_SESSION['discount_percent'] = $coupon['discount_percent'];
+            flash('Coupon applied successfully!', 'success');
+        } else {
+            flash('Invalid or expired coupon code.', 'danger');
+        }
+    }
+    redirect('cart.php');
+}
+
+// Check for existing coupon in session
+if (isset($_SESSION['coupon_code']) && isset($_SESSION['discount_percent'])) {
+    $coupon_code = $_SESSION['coupon_code'];
+    $discount_percent = $_SESSION['discount_percent'];
+}
+
 // Get cart items
 $items = [];
 $subtotal = 0;
@@ -84,6 +136,7 @@ $subtotal = 0;
 if ($is_logged_in) {
     // Get from database
     $sql = "SELECT c.*, p.name, p.price, p.stock, p.slug,
+            p.is_on_sale, p.discounted_price, p.discount_percent,
             (SELECT filename FROM product_images WHERE product_id = p.id LIMIT 1) as image
             FROM carts c
             JOIN products p ON p.id = c.product_id
@@ -94,7 +147,21 @@ if ($is_logged_in) {
     $result = $stmt->get_result();
     
     while ($item = $result->fetch_assoc()) {
-        $item['item_total'] = $item['price'] * $item['quantity'];
+        // Check if product has discount
+        $display_price = $item['price'];
+        $is_on_sale = false;
+        $discount_percent_item = 0;
+        
+        if ($item['is_on_sale'] == 1 && $item['discounted_price'] > 0 && $item['discounted_price'] < $item['price']) {
+            $display_price = $item['discounted_price'];
+            $is_on_sale = true;
+            $discount_percent_item = $item['discount_percent'] ?? 0;
+        }
+        
+        $item['display_price'] = $display_price;
+        $item['is_on_sale'] = $is_on_sale;
+        $item['discount_percent_item'] = $discount_percent_item;
+        $item['item_total'] = $display_price * $item['quantity'];
         $items[] = $item;
         $subtotal += $item['item_total'];
     }
@@ -105,6 +172,7 @@ if ($is_logged_in) {
         $ids = array_keys($session_cart);
         $placeholders = implode(',', array_fill(0, count($ids), '?'));
         $sql = "SELECT p.id, p.name, p.price, p.stock, p.slug,
+                p.is_on_sale, p.discounted_price, p.discount_percent,
                 (SELECT filename FROM product_images WHERE product_id = p.id LIMIT 1) as image
                 FROM products p 
                 WHERE p.id IN ($placeholders) AND p.status = 'approved'";
@@ -116,19 +184,48 @@ if ($is_logged_in) {
         $result = $stmt->get_result();
         
         while ($item = $result->fetch_assoc()) {
+            // Check if product has discount
+            $display_price = $item['price'];
+            $is_on_sale = false;
+            $discount_percent_item = 0;
+            
+            if ($item['is_on_sale'] == 1 && $item['discounted_price'] > 0 && $item['discounted_price'] < $item['price']) {
+                $display_price = $item['discounted_price'];
+                $is_on_sale = true;
+                $discount_percent_item = $item['discount_percent'] ?? 0;
+            }
+            
             $quantity = min($session_cart[$item['id']], $item['stock']);
             $item['quantity'] = $quantity;
-            $item['item_total'] = $item['price'] * $quantity;
+            $item['display_price'] = $display_price;
+            $item['is_on_sale'] = $is_on_sale;
+            $item['discount_percent_item'] = $discount_percent_item;
+            $item['item_total'] = $display_price * $quantity;
             $items[] = $item;
             $subtotal += $item['item_total'];
         }
     }
 }
 
+// Apply global coupon discount
+$coupon_discount = 0;
+if ($discount_percent > 0 && $subtotal > 0) {
+    $coupon_discount = $subtotal * ($discount_percent / 100);
+}
+
+// Remove coupon if subtotal is 0
+if ($subtotal == 0) {
+    unset($_SESSION['coupon_code']);
+    unset($_SESSION['discount_percent']);
+    $coupon_code = '';
+    $discount_percent = 0;
+}
+
 // Calculate totals
+$subtotal_after_coupon = $subtotal - $coupon_discount;
 $shipping_cost = ($subtotal > 0 && $subtotal < 5000) ? 250 : 0;
-$tax = $subtotal * 0.16;
-$total = $subtotal + $shipping_cost + $tax;
+$tax = $subtotal_after_coupon * 0.16;
+$total = $subtotal_after_coupon + $shipping_cost + $tax;
 ?>
 
 <style>
@@ -222,6 +319,29 @@ $total = $subtotal + $shipping_cost + $tax;
         color: #2563eb;
     }
     
+    .discount-badge {
+        display: inline-block;
+        background: #fee2e2;
+        color: #dc2626;
+        padding: 2px 10px;
+        border-radius: 20px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        margin-left: 8px;
+    }
+    
+    .original-price {
+        text-decoration: line-through;
+        color: #9ca3af;
+        font-size: 0.8rem;
+        margin-right: 8px;
+    }
+    
+    .sale-price {
+        color: #dc2626;
+        font-weight: 700;
+    }
+    
     .quantity-selector {
         display: flex;
         align-items: center;
@@ -235,6 +355,7 @@ $total = $subtotal + $shipping_cost + $tax;
         background: white;
         border-radius: 8px;
         cursor: pointer;
+        transition: all 0.3s ease;
     }
     
     .qty-btn:hover {
@@ -261,6 +382,7 @@ $total = $subtotal + $shipping_cost + $tax;
         cursor: pointer;
         font-size: 18px;
         transition: all 0.3s ease;
+        padding: 5px 10px;
     }
     
     .remove-btn:hover {
@@ -288,7 +410,8 @@ $total = $subtotal + $shipping_cost + $tax;
     .summary-row {
         display: flex;
         justify-content: space-between;
-        margin-bottom: 15px;
+        margin-bottom: 12px;
+        padding: 4px 0;
     }
     
     .summary-total {
@@ -302,6 +425,60 @@ $total = $subtotal + $shipping_cost + $tax;
         font-size: 18px;
         font-weight: 700;
         color: #2563eb;
+    }
+    
+    .coupon-section {
+        margin: 15px 0;
+        display: flex;
+        gap: 10px;
+    }
+    
+    .coupon-section input {
+        flex: 1;
+        padding: 10px 14px;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        font-size: 0.9rem;
+    }
+    
+    .coupon-section input:focus {
+        border-color: #2563eb;
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+    }
+    
+    .coupon-section button {
+        padding: 10px 20px;
+        background: #f59e0b;
+        color: white;
+        border: none;
+        border-radius: 10px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .coupon-section button:hover {
+        background: #d97706;
+        transform: translateY(-2px);
+    }
+    
+    .coupon-applied {
+        background: #d1fae5;
+        color: #059669;
+        padding: 10px 15px;
+        border-radius: 10px;
+        margin-bottom: 15px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .coupon-applied .remove-coupon {
+        color: #dc2626;
+        cursor: pointer;
+        text-decoration: none;
+        font-weight: 600;
     }
     
     .checkout-btn {
@@ -325,6 +502,12 @@ $total = $subtotal + $shipping_cost + $tax;
         transform: translateY(-2px);
         box-shadow: 0 10px 25px rgba(37,99,235,0.3);
         color: white;
+    }
+    
+    .checkout-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
     }
     
     .continue-shopping {
@@ -407,6 +590,12 @@ $total = $subtotal + $shipping_cost + $tax;
         color: #ef4444;
     }
     
+    .discount-saved {
+        color: #dc2626;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+    
     @media (max-width: 768px) {
         .product-info {
             flex-direction: column;
@@ -423,6 +612,9 @@ $total = $subtotal + $shipping_cost + $tax;
         .product-image-container {
             width: 60px;
             height: 60px;
+        }
+        .coupon-section {
+            flex-direction: column;
         }
     }
 </style>
@@ -449,6 +641,8 @@ $total = $subtotal + $shipping_cost + $tax;
             <div class="col-lg-8">
                 <div class="cart-table-wrapper">
                     <form method="post" id="cartForm">
+                        <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
+                        <input type="hidden" name="update_cart" value="1">
                         <table class="cart-table">
                             <thead>
                                 <tr>
@@ -462,6 +656,9 @@ $total = $subtotal + $shipping_cost + $tax;
                             <tbody>
                                 <?php foreach ($items as $item): 
                                     $has_image = !empty($item['image']) && file_exists('uploads/products/' . $item['image']);
+                                    $is_on_sale = $item['is_on_sale'] ?? false;
+                                    $display_price = $item['display_price'] ?? $item['price'];
+                                    $original_price = $item['price'];
                                 ?>
                                     <tr>
                                         <td>
@@ -481,6 +678,9 @@ $total = $subtotal + $shipping_cost + $tax;
                                                 <div>
                                                     <div class="product-name">
                                                         <a href="product.php?id=<?= $item['id'] ?>"><?= sanitize($item['name']) ?></a>
+                                                        <?php if ($is_on_sale): ?>
+                                                            <span class="discount-badge">-<?= $item['discount_percent_item'] ?? 0 ?>% OFF</span>
+                                                        <?php endif; ?>
                                                     </div>
                                                     <?php if ($item['stock'] > 10): ?>
                                                         <span class="stock-status in-stock"><i class="fa-solid fa-check-circle"></i> In Stock</span>
@@ -492,7 +692,14 @@ $total = $subtotal + $shipping_cost + $tax;
                                                 </div>
                                             </div>
                                         </td>
-                                        <td class="price-text">KSH <?= number_format($item['price']) ?></td>
+                                        <td>
+                                            <?php if ($is_on_sale): ?>
+                                                <span class="original-price">KSH <?= number_format($original_price) ?></span>
+                                                <span class="sale-price">KSH <?= number_format($display_price) ?></span>
+                                            <?php else: ?>
+                                                <span class="price-text">KSH <?= number_format($display_price) ?></span>
+                                            <?php endif; ?>
+                                        </td>
                                         <td>
                                             <div class="quantity-selector">
                                                 <button type="button" class="qty-btn" onclick="updateQty('qty_<?= $item['id'] ?>', -1, <?= $item['stock'] ?>)">-</button>
@@ -500,9 +707,16 @@ $total = $subtotal + $shipping_cost + $tax;
                                                 <button type="button" class="qty-btn" onclick="updateQty('qty_<?= $item['id'] ?>', 1, <?= $item['stock'] ?>)">+</button>
                                             </div>
                                         </td>
-                                        <td class="price-text">KSH <?= number_format($item['item_total']) ?></td>
                                         <td>
-                                            <a href="cart.php?remove=<?= $item['id'] ?>" class="remove-btn" onclick="return confirm('Remove this item?')">
+                                            <div class="price-text">KSH <?= number_format($item['item_total']) ?></div>
+                                            <?php if ($is_on_sale): ?>
+                                                <div class="discount-saved">
+                                                    <i class="fa-solid fa-tag"></i> Saved: KSH <?= number_format(($original_price - $display_price) * $item['quantity']) ?>
+                                                </div>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td>
+                                            <a href="cart.php?remove=<?= $item['id'] ?>&csrf_token=<?= csrf_token() ?>" class="remove-btn" onclick="return confirm('Remove this item from cart?')">
                                                 <i class="fa-solid fa-trash-can"></i>
                                             </a>
                                         </td>
@@ -515,10 +729,10 @@ $total = $subtotal + $shipping_cost + $tax;
                 <div class="cart-actions">
                     <a href="shop.php" class="continue-shopping"><i class="fa-solid fa-arrow-left"></i> Continue Shopping</a>
                     <div class="d-flex gap-2">
-                        <button type="button" class="clear-cart-btn" onclick="if(confirm('Clear entire cart?')) window.location.href='cart.php?clear=1'">
+                        <a href="cart.php?clear=1&csrf_token=<?= csrf_token() ?>" class="clear-cart-btn" onclick="return confirm('Clear entire cart?')">
                             <i class="fa-solid fa-trash-can"></i> Clear Cart
-                        </button>
-                        <button type="submit" form="cartForm" name="update_cart" class="update-cart-btn">
+                        </a>
+                        <button type="submit" form="cartForm" class="update-cart-btn">
                             <i class="fa-solid fa-rotate"></i> Update Cart
                         </button>
                     </div>
@@ -528,30 +742,69 @@ $total = $subtotal + $shipping_cost + $tax;
             <div class="col-lg-4">
                 <div class="cart-summary">
                     <h3 class="summary-title">Order Summary</h3>
+                    
+                    <!-- Coupon Section -->
+                    <form method="post" class="coupon-section">
+                        <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
+                        <input type="hidden" name="apply_coupon" value="1">
+                        <input type="text" name="coupon_code" placeholder="Enter coupon code" value="<?= sanitize($coupon_code) ?>">
+                        <button type="submit"><i class="fa-solid fa-tag"></i> Apply</button>
+                    </form>
+                    
+                    <?php if (!empty($coupon_code) && $discount_percent > 0): ?>
+                        <div class="coupon-applied">
+                            <span><i class="fa-solid fa-check-circle"></i> Coupon applied! <?= $discount_percent ?>% off</span>
+                            <a href="cart.php?remove_coupon=1&csrf_token=<?= csrf_token() ?>" class="remove-coupon">Remove</a>
+                        </div>
+                    <?php endif; ?>
+                    
                     <div class="summary-row">
                         <span class="summary-label">Subtotal</span>
                         <span class="summary-value">KSH <?= number_format($subtotal) ?></span>
                     </div>
+                    
+                    <?php if ($coupon_discount > 0): ?>
+                        <div class="summary-row" style="color: #dc2626;">
+                            <span class="summary-label">Discount (<?= $discount_percent ?>%)</span>
+                            <span class="summary-value">- KSH <?= number_format($coupon_discount) ?></span>
+                        </div>
+                    <?php endif; ?>
+                    
+                    <div class="summary-row">
+                        <span class="summary-label">Subtotal after discount</span>
+                        <span class="summary-value">KSH <?= number_format($subtotal_after_coupon) ?></span>
+                    </div>
+                    
                     <div class="summary-row">
                         <span class="summary-label">Shipping</span>
                         <span class="summary-value"><?= $shipping_cost > 0 ? 'KSH '.number_format($shipping_cost) : 'Free' ?></span>
                     </div>
+                    
                     <div class="summary-row">
                         <span class="summary-label">Tax (16% VAT)</span>
                         <span class="summary-value">KSH <?= number_format($tax) ?></span>
                     </div>
+                    
                     <div class="summary-row summary-total">
                         <span class="summary-label">Total</span>
                         <span class="summary-value">KSH <?= number_format($total) ?></span>
                     </div>
+                    
                     <?php if ($subtotal < 5000 && $subtotal > 0): ?>
                         <div class="alert alert-warning mt-3" style="font-size: 12px; border-radius: 12px; padding: 12px;">
                             <i class="fa-solid fa-truck"></i> Add KSH <?= number_format(5000 - $subtotal) ?> more for free shipping!
                         </div>
                     <?php endif; ?>
-                    <a href="checkout.php" class="checkout-btn">
-                        <i class="fa-solid fa-lock"></i> Proceed to Checkout
-                    </a>
+                    
+                    <?php if ($total > 0): ?>
+                        <a href="checkout.php" class="checkout-btn">
+                            <i class="fa-solid fa-lock"></i> Proceed to Checkout
+                        </a>
+                    <?php else: ?>
+                        <button class="checkout-btn" disabled>
+                            <i class="fa-solid fa-lock"></i> Cart is Empty
+                        </button>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
@@ -568,6 +821,7 @@ function updateQty(inputId, change, maxStock) {
     input.value = newValue;
 }
 
+// Auto-submit on quantity change
 document.querySelectorAll('.qty-input').forEach(input => {
     input.addEventListener('change', function() {
         document.getElementById('cartForm').submit();
@@ -589,6 +843,13 @@ function updateCartCount() {
 
 $(document).ready(function() {
     updateCartCount();
+});
+
+// Remove coupon handler
+document.querySelector('.remove-coupon')?.addEventListener('click', function(e) {
+    if (!confirm('Remove coupon from cart?')) {
+        e.preventDefault();
+    }
 });
 </script>
 

@@ -11,7 +11,9 @@ $cart_items = [];
 $subtotal = 0;
 
 // For logged-in users, get cart from database
-$sql = "SELECT c.*, p.id as product_id, p.name, p.price, p.stock, p.slug, s.shop_name, s.id as seller_id
+$sql = "SELECT c.*, p.id as product_id, p.name, p.price, p.stock, p.slug, 
+        p.is_on_sale, p.discounted_price, p.discount_percent,
+        s.shop_name, s.id as seller_id
         FROM carts c
         JOIN products p ON p.id = c.product_id
         LEFT JOIN sellers s ON p.seller_id = s.id
@@ -22,7 +24,21 @@ $stmt->execute();
 $result = $stmt->get_result();
 
 while ($row = $result->fetch_assoc()) {
-    $row['item_total'] = $row['price'] * $row['quantity'];
+    // Check if product has discount
+    $display_price = $row['price'];
+    $is_on_sale = false;
+    $discount_percent_item = 0;
+    
+    if ($row['is_on_sale'] == 1 && $row['discounted_price'] > 0 && $row['discounted_price'] < $row['price']) {
+        $display_price = $row['discounted_price'];
+        $is_on_sale = true;
+        $discount_percent_item = $row['discount_percent'] ?? 0;
+    }
+    
+    $row['display_price'] = $display_price;
+    $row['is_on_sale'] = $is_on_sale;
+    $row['discount_percent_item'] = $discount_percent_item;
+    $row['item_total'] = $display_price * $row['quantity'];
     $cart_items[] = $row;
     $subtotal += $row['item_total'];
 }
@@ -34,7 +50,9 @@ if (empty($cart_items) && isset($_SESSION['cart']) && !empty($_SESSION['cart']))
     
     if (!empty($ids)) {
         $placeholders = implode(',', array_fill(0, count($ids), '?'));
-        $sql = "SELECT p.*, p.id as product_id, s.shop_name, s.id as seller_id 
+        $sql = "SELECT p.*, p.id as product_id, 
+                p.is_on_sale, p.discounted_price, p.discount_percent,
+                s.shop_name, s.id as seller_id 
                 FROM products p
                 LEFT JOIN sellers s ON p.seller_id = s.id
                 WHERE p.id IN ($placeholders) AND p.status = 'approved'";
@@ -45,9 +63,23 @@ if (empty($cart_items) && isset($_SESSION['cart']) && !empty($_SESSION['cart']))
         $result = $stmt->get_result();
         
         while ($row = $result->fetch_assoc()) {
+            // Check if product has discount
+            $display_price = $row['price'];
+            $is_on_sale = false;
+            $discount_percent_item = 0;
+            
+            if ($row['is_on_sale'] == 1 && $row['discounted_price'] > 0 && $row['discounted_price'] < $row['price']) {
+                $display_price = $row['discounted_price'];
+                $is_on_sale = true;
+                $discount_percent_item = $row['discount_percent'] ?? 0;
+            }
+            
             $quantity = $session_cart[$row['id']];
             $row['quantity'] = $quantity;
-            $row['item_total'] = $row['price'] * $quantity;
+            $row['display_price'] = $display_price;
+            $row['is_on_sale'] = $is_on_sale;
+            $row['discount_percent_item'] = $discount_percent_item;
+            $row['item_total'] = $display_price * $quantity;
             $cart_items[] = $row;
             $subtotal += $row['item_total'];
         }
@@ -59,10 +91,21 @@ if (empty($cart_items)) {
     redirect('cart.php');
 }
 
-// Calculate totals
+// Apply coupon discount if exists
+$coupon_discount = 0;
+$discount_percent = 0;
+$coupon_code = '';
+
+if (isset($_SESSION['coupon_code']) && isset($_SESSION['discount_percent'])) {
+    $coupon_code = $_SESSION['coupon_code'];
+    $discount_percent = $_SESSION['discount_percent'];
+    $coupon_discount = $subtotal * ($discount_percent / 100);
+}
+
+$subtotal_after_coupon = $subtotal - $coupon_discount;
 $shipping_cost = ($subtotal > 0 && $subtotal < 5000) ? 250 : 0;
-$tax = $subtotal * 0.16;
-$total = $subtotal + $shipping_cost + $tax;
+$tax = $subtotal_after_coupon * 0.16;
+$total = $subtotal_after_coupon + $shipping_cost + $tax;
 
 // Handle checkout submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -95,6 +138,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         'total' => 0
                     ];
                 }
+                // Use display_price (with discount) for order
+                $item_price = $item['display_price'] ?? $item['price'];
+                $item['order_price'] = $item_price;
+                $item['item_total'] = $item_price * $item['quantity'];
                 $seller_items[$seller_id]['items'][] = $item;
                 $seller_items[$seller_id]['total'] += $item['item_total'];
             }
@@ -122,10 +169,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     
                     // Add order items and update stock
                     foreach ($seller_data['items'] as $item) {
-                        // Insert order item
+                        // Insert order item with the discounted price
                         $item_sql = "INSERT INTO order_items (order_id, product_id, quantity, unit_price) VALUES (?, ?, ?, ?)";
                         $item_stmt = $mysqli->prepare($item_sql);
-                        $item_stmt->bind_param('iiid', $order_id, $item['product_id'], $item['quantity'], $item['price']);
+                        $order_price = $item['order_price'] ?? $item['price'];
+                        $item_stmt->bind_param('iiid', $order_id, $item['product_id'], $item['quantity'], $order_price);
                         
                         if (!$item_stmt->execute()) {
                             throw new Exception("Failed to insert order item: " . $item_stmt->error);
@@ -152,8 +200,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $clear_stmt->bind_param('i', $user_id);
             $clear_stmt->execute();
             
-            // Clear session cart
+            // Clear session cart and coupon
             unset($_SESSION['cart']);
+            unset($_SESSION['coupon_code']);
+            unset($_SESSION['discount_percent']);
             
             // Store order ID in session for receipt redirect
             $_SESSION['last_order_id'] = $first_order_id;
@@ -248,6 +298,29 @@ $user_address = $user['address'] ?? '';
         color: #2563eb;
     }
     
+    .discount-badge {
+        display: inline-block;
+        background: #fee2e2;
+        color: #dc2626;
+        padding: 1px 8px;
+        border-radius: 12px;
+        font-size: 0.6rem;
+        font-weight: 600;
+        margin-left: 6px;
+    }
+    
+    .sale-price {
+        color: #dc2626;
+        font-weight: 600;
+    }
+    
+    .original-price {
+        text-decoration: line-through;
+        color: #9ca3af;
+        font-size: 0.75rem;
+        margin-right: 6px;
+    }
+    
     .summary-row {
         display: flex;
         justify-content: space-between;
@@ -261,6 +334,23 @@ $user_address = $user['address'] ?? '';
         font-size: 1.1rem;
         font-weight: 700;
         color: #2563eb;
+    }
+    
+    .discount-row {
+        color: #dc2626;
+        font-weight: 600;
+    }
+    
+    .coupon-applied {
+        background: #d1fae5;
+        color: #059669;
+        padding: 8px 12px;
+        border-radius: 8px;
+        margin-bottom: 10px;
+        font-size: 0.8rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
     }
     
     .form-label {
@@ -411,180 +501,13 @@ $user_address = $user['address'] ?? '';
         border-radius: 20px;
     }
     
-    /* Success Overlay */
-    .success-overlay {
-        display: none;
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(0, 0, 0, 0.6);
-        z-index: 9999;
-        align-items: center;
-        justify-content: center;
-    }
-    
-    .success-overlay.active {
-        display: flex;
-    }
-    
-    .success-modal {
-        background: white;
-        border-radius: 24px;
-        padding: 50px;
-        max-width: 500px;
-        width: 90%;
-        text-align: center;
-        animation: slideUp 0.5s ease;
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-    }
-    
-    @keyframes slideUp {
-        from {
-            transform: translateY(50px);
-            opacity: 0;
-        }
-        to {
-            transform: translateY(0);
-            opacity: 1;
-        }
-    }
-    
-    .success-icon {
-        font-size: 4rem;
-        color: #10b981;
-        margin-bottom: 20px;
-        animation: scaleIn 0.5s ease 0.3s both;
-    }
-    
-    @keyframes scaleIn {
-        from {
-            transform: scale(0);
-        }
-        to {
-            transform: scale(1);
-        }
-    }
-    
-    .success-title {
-        font-size: 1.8rem;
-        font-weight: 700;
-        color: #1f2937;
-        margin-bottom: 10px;
-    }
-    
-    .success-message {
-        color: #6b7280;
-        margin-bottom: 25px;
-        line-height: 1.6;
-    }
-    
-    .success-order-number {
-        background: #f3f4f6;
-        padding: 10px 20px;
-        border-radius: 12px;
-        font-family: monospace;
-        font-weight: 600;
-        font-size: 1.1rem;
-        color: #2563eb;
-        display: inline-block;
-        margin-bottom: 25px;
-    }
-    
-    .success-loading-bar {
-        width: 100%;
-        height: 4px;
-        background: #e5e7eb;
-        border-radius: 4px;
-        overflow: hidden;
-        margin-bottom: 20px;
-    }
-    
-    .success-loading-bar .progress {
-        height: 100%;
-        background: linear-gradient(90deg, #10b981, #059669);
-        border-radius: 4px;
-        width: 0%;
-        animation: progressBar 5s ease forwards;
-    }
-    
-    @keyframes progressBar {
-        0% { width: 0%; }
-        100% { width: 100%; }
-    }
-    
-    .btn-view-order {
-        background: linear-gradient(135deg, #2563eb, #1d4ed8);
-        color: white;
-        border: none;
-        padding: 12px 30px;
-        border-radius: 12px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        text-decoration: none;
-        display: inline-block;
-    }
-    
-    .btn-view-order:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(37, 99, 235, 0.3);
-        color: white;
-    }
-    
-    .btn-continue-shop {
-        background: #f3f4f6;
-        color: #374151;
-        border: none;
-        padding: 12px 30px;
-        border-radius: 12px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        text-decoration: none;
-        display: inline-block;
-        margin-left: 10px;
-    }
-    
-    .btn-continue-shop:hover {
-        background: #e5e7eb;
-    }
-    
     @media (max-width: 768px) {
         .checkout-title { font-size: 1.5rem; }
         .payment-methods { flex-direction: column; }
         .order-summary-card { position: static; margin-top: 20px; }
-        .success-modal { padding: 30px; }
-        .success-title { font-size: 1.4rem; }
-        .btn-continue-shop { margin-left: 0; margin-top: 10px; }
     }
 </style>
 
-<!-- Success Overlay -->
-<div class="success-overlay" id="successOverlay">
-    <div class="success-modal">
-        <div class="success-icon">
-            <i class="fa-regular fa-circle-check"></i>
-        </div>
-        <h3 class="success-title">Order Placed Successfully!</h3>
-        <p class="success-message" id="successMessage">Your order has been placed and is being processed.</p>
-        <div class="success-order-number" id="orderNumberDisplay">#ORD-XXXXXX</div>
-        <div class="success-loading-bar">
-            <div class="progress" id="progressBar"></div>
-        </div>
-        <div id="actionButtons" style="display: none;">
-            <a href="#" class="btn-view-order" id="viewOrderBtn">
-                <i class="fa-regular fa-eye"></i> View Order
-            </a>
-            <a href="shop.php" class="btn-continue-shop">
-                <i class="fa-solid fa-store"></i> Continue Shopping
-            </a>
-        </div>
-    </div>
-</div>
-
-<!-- Page Header -->
 <div class="checkout-header">
     <div class="container">
         <h1 class="checkout-title">Checkout</h1>
@@ -687,12 +610,36 @@ $user_address = $user['address'] ?? '';
                 <div class="order-summary-card">
                     <h3 class="section-title"><i class="fa-solid fa-receipt"></i> Order Summary</h3>
                     
+                    <!-- Coupon Applied -->
+                    <?php if (!empty($coupon_code) && $discount_percent > 0): ?>
+                        <div class="coupon-applied">
+                            <span><i class="fa-solid fa-tag"></i> Coupon applied! <?= $discount_percent ?>% off</span>
+                            <span style="color: #059669;">- KSH <?= number_format($coupon_discount) ?></span>
+                        </div>
+                    <?php endif; ?>
+                    
                     <div class="cart-items">
-                        <?php foreach ($cart_items as $item): ?>
+                        <?php foreach ($cart_items as $item): 
+                            $is_on_sale = $item['is_on_sale'] ?? false;
+                            $display_price = $item['display_price'] ?? $item['price'];
+                        ?>
                             <div class="cart-item">
                                 <div>
-                                    <div class="cart-item-name"><?= htmlspecialchars($item['name']) ?></div>
-                                    <div class="cart-item-price">KSH <?= number_format($item['price']) ?> × <?= $item['quantity'] ?></div>
+                                    <div class="cart-item-name">
+                                        <?= htmlspecialchars($item['name']) ?>
+                                        <?php if ($is_on_sale): ?>
+                                            <span class="discount-badge">-<?= $item['discount_percent_item'] ?? 0 ?>%</span>
+                                        <?php endif; ?>
+                                    </div>
+                                    <div class="cart-item-price">
+                                        <?php if ($is_on_sale): ?>
+                                            <span class="original-price">KSH <?= number_format($item['price']) ?></span>
+                                            <span class="sale-price">KSH <?= number_format($display_price) ?></span>
+                                        <?php else: ?>
+                                            KSH <?= number_format($display_price) ?>
+                                        <?php endif; ?>
+                                        × <?= $item['quantity'] ?>
+                                    </div>
                                 </div>
                                 <div class="cart-item-total">KSH <?= number_format($item['item_total']) ?></div>
                             </div>
@@ -704,6 +651,21 @@ $user_address = $user['address'] ?? '';
                             <span>Subtotal</span>
                             <span>KSH <?= number_format($subtotal) ?></span>
                         </div>
+                        
+                        <?php if ($coupon_discount > 0): ?>
+                            <div class="summary-row discount-row">
+                                <span>Discount (<?= $discount_percent ?>%)</span>
+                                <span>- KSH <?= number_format($coupon_discount) ?></span>
+                            </div>
+                        <?php endif; ?>
+                        
+                        <?php if ($coupon_discount > 0): ?>
+                            <div class="summary-row">
+                                <span>Subtotal after discount</span>
+                                <span>KSH <?= number_format($subtotal_after_coupon) ?></span>
+                            </div>
+                        <?php endif; ?>
+                        
                         <div class="summary-row">
                             <span>Shipping</span>
                             <span><?= $shipping_cost > 0 ? 'KSH ' . number_format($shipping_cost) : 'Free' ?></span>
@@ -756,53 +718,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
-
-// Check if order was just placed successfully (from session)
-<?php if (isset($_SESSION['last_order_id']) && isset($_GET['show_success'])): 
-    $order_id = $_SESSION['last_order_id'];
-    // Get order number
-    $order_sql = "SELECT order_number FROM orders WHERE id = ?";
-    $order_stmt = $mysqli->prepare($order_sql);
-    $order_stmt->bind_param('i', $order_id);
-    $order_stmt->execute();
-    $order_result = $order_stmt->get_result();
-    $order_data = $order_result->fetch_assoc();
-    $order_number = $order_data['order_number'] ?? 'ORD-' . $order_id;
-    unset($_SESSION['last_order_id']);
-?>
-    // Show success overlay
-    showSuccessOverlay(<?= $order_id ?>, '<?= $order_number ?>');
-<?php endif; ?>
-
-function showSuccessOverlay(orderId, orderNumber) {
-    const overlay = document.getElementById('successOverlay');
-    const orderNumberDisplay = document.getElementById('orderNumberDisplay');
-    const viewOrderBtn = document.getElementById('viewOrderBtn');
-    const actionButtons = document.getElementById('actionButtons');
-    const progressBar = document.getElementById('progressBar');
-    const successMessage = document.getElementById('successMessage');
-    
-    // Set order number
-    orderNumberDisplay.textContent = '#' + orderNumber;
-    
-    // Show overlay
-    overlay.classList.add('active');
-    
-    // Start progress bar animation
-    progressBar.style.animation = 'progressBar 5s ease forwards';
-    
-    // Show action buttons after 5 seconds
-    setTimeout(function() {
-        // Hide progress bar
-        document.querySelector('.success-loading-bar').style.display = 'none';
-        
-        // Show action buttons
-        actionButtons.style.display = 'block';
-        
-        // Set view order link
-        viewOrderBtn.href = 'receipt.php?id=' + orderId;
-    }, 5000);
-}
 </script>
 
 <?php require_once 'includes/footer.php'; ?>

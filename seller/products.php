@@ -198,9 +198,9 @@ $products_result = $mysqli->query("SELECT p.*, c.name as category_name
                             <td><?= htmlspecialchars($product['category_name'] ?? '-') ?></td>
                             <td>
                                 <?php if($has_discount): ?>
-                                    <span style="color:#ef4444; font-weight:600;">KSH <?= number_format($product['discounted_price'] ?? ($product['price'] * (1 - $discount / 100))) ?></span>
+                                    <span style="color:#ef4444; font-weight:600; font-size:0.85rem;">KSH <?= number_format($product['discounted_price'] ?? ($product['price'] * (1 - $discount / 100))) ?></span>
                                     <br>
-                                    <span style="text-decoration:line-through; color:#9ca3af; font-size:0.75rem;">KSH <?= number_format($product['price']) ?></span>
+                                    <span style="text-decoration:line-through; color:#9ca3af; font-size:0.65rem;">KSH <?= number_format($product['price']) ?></span>
                                 <?php else: ?>
                                     KSH <?= number_format($product['price']) ?>
                                 <?php endif; ?>

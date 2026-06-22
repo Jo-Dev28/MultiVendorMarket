@@ -48,7 +48,7 @@ $waiting_payment = ($existing_seller && $existing_seller['status'] === 'verified
 
 // Handle payment submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['make_payment']) && isset($_SESSION['temp_application'])) {
-    $payment_method = sanitize($_POST['payment_method']);
+    $payment_method = sanitize($_POST['payment_method'] ?? '');
     $transaction_ref = sanitize($_POST['transaction_ref'] ?? '');
     $application = $_SESSION['temp_application'];
     
@@ -71,6 +71,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['make_payment']) && is
         $payment_stmt->bind_param('idss', $order_id, $application['amount'], $payment_method, $transaction_ref);
         $payment_stmt->execute();
         
+        // Create subscription record
+        $sub_sql = "INSERT INTO subscriptions (seller_id, plan_name, amount, currency, status, starts_at, expires_at, created_at) 
+                    VALUES (?, ?, ?, 'KSH', 'pending', NULL, NULL, NOW())";
+        $sub_stmt = $mysqli->prepare($sub_sql);
+        $sub_stmt->bind_param('isd', $application['seller_id'], $application['plan_name'], $application['amount']);
+        $sub_stmt->execute();
+        
         // Clear temp session
         unset($_SESSION['temp_application']);
         
@@ -92,9 +99,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_application'])
     // Handle ID upload
     $id_image = '';
     if (isset($_FILES['id_image']) && $_FILES['id_image']['error'] === UPLOAD_ERR_OK) {
-        $upload_result = upload_image($_FILES['id_image'], 'seller_ids');
-        if ($upload_result['success']) {
-            $id_image = $upload_result['filename'];
+        // Create upload directory if not exists
+        $upload_dir = '../assets/uploads/seller_ids/';
+        if (!is_dir($upload_dir)) {
+            mkdir($upload_dir, 0777, true);
+        }
+        
+        $allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        if (in_array($_FILES['id_image']['type'], $allowed_types)) {
+            $ext = pathinfo($_FILES['id_image']['name'], PATHINFO_EXTENSION);
+            $filename = 'seller_id_' . time() . '_' . bin2hex(random_bytes(8)) . '.' . $ext;
+            $filepath = $upload_dir . $filename;
+            
+            if (move_uploaded_file($_FILES['id_image']['tmp_name'], $filepath)) {
+                $id_image = 'seller_ids/' . $filename;
+            }
         }
     }
     
@@ -121,6 +140,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_application'])
             
             // Show payment form
             $show_payment_form = true;
+            flash('Application submitted! Please complete payment to activate your subscription.', 'success');
         } else {
             flash('Failed to submit application. Please try again.', 'danger');
         }
@@ -129,10 +149,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_application'])
 
 $show_payment_form = isset($_SESSION['temp_application']) && !$is_pending && !$existing_seller;
 $temp_app = $_SESSION['temp_application'] ?? null;
+
+// Get site name for email
+$site_name = defined('SITE_NAME') ? SITE_NAME : 'Multi-Vendor Marketplace';
 ?>
 
 <style>
-/* Become Seller Page Styles - No conflicts with header */
+/* Become Seller Page Styles */
 .become-seller-wrapper {
     max-width: 1200px;
     margin: 0 auto;
@@ -449,6 +472,7 @@ $temp_app = $_SESSION['temp_application'] ?? null;
     display: flex;
     align-items: center;
     justify-content: center;
+    font-size: 1.2rem;
 }
 
 .payment-instructions-seller {
@@ -483,6 +507,12 @@ $temp_app = $_SESSION['temp_application'] ?? null;
 .btn-pay-seller:hover {
     transform: translateY(-2px);
     box-shadow: 0 5px 15px rgba(16,185,129,0.3);
+}
+
+.btn-pay-seller:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
 }
 
 .required-star {
@@ -579,7 +609,7 @@ $temp_app = $_SESSION['temp_application'] ?? null;
                     <p class="become-seller-subtitle">Pay KSH <?= number_format($temp_app['amount']) ?> for <?= $temp_app['plan_name'] ?> Plan</p>
                     
                     <div class="payment-details-seller">
-                        <p><strong>Application Submitted!</strong> Complete payment to activate your subscription.</p>
+                        <p><strong>✅ Application Submitted!</strong> Complete payment to activate your subscription.</p>
                         <hr>
                         <p><strong>Plan:</strong> <?= $temp_app['plan_name'] ?></p>
                         <p><strong>Amount:</strong> KSH <?= number_format($temp_app['amount']) ?></p>
@@ -591,7 +621,7 @@ $temp_app = $_SESSION['temp_application'] ?? null;
                         
                         <div class="payment-method-card-seller" onclick="selectPaymentMethod(this, 'M-Pesa')">
                             <input type="radio" name="payment_method" value="M-Pesa" class="d-none" required>
-                            <div class="payment-method-icon-seller"><i class="fa-solid fa-mobile-alt"></i></div>
+                            <div class="payment-method-icon-seller"><i class="fa-solid fa-mobile-screen-button"></i></div>
                             <div class="flex-grow-1 text-start">
                                 <strong>M-Pesa</strong>
                                 <p class="text-muted small mb-0">Pay using M-Pesa</p>
@@ -637,7 +667,7 @@ $temp_app = $_SESSION['temp_application'] ?? null;
                         <div id="bankInstructions" class="payment-instructions-seller" style="display: none;">
                             <i class="fa-solid fa-building-columns"></i> <strong>Bank Transfer Instructions:</strong><br>
                             Bank: <strong>KCB Bank Kenya</strong><br>
-                            Account Name: <strong><?= SITE_NAME ?> Ltd</strong><br>
+                            Account Name: <strong><?= $site_name ?> Ltd</strong><br>
                             Account Number: <strong>1234567890</strong><br>
                             Reference: <strong>SUB-<?= date('Ymd') ?>-<?= $user_id ?></strong>
                         </div>
@@ -675,7 +705,7 @@ $temp_app = $_SESSION['temp_application'] ?? null;
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="become-seller-label"><i class="fa-solid fa-image"></i> Upload ID Document</label>
-                                <input type="file" name="id_image" class="become-seller-input">
+                                <input type="file" name="id_image" class="become-seller-input" accept="image/*">
                             </div>
                             <div class="col-12 mb-3">
                                 <label class="become-seller-label"><i class="fa-solid fa-location-dot"></i> Location</label>
@@ -729,7 +759,7 @@ $temp_app = $_SESSION['temp_application'] ?? null;
                         <input type="hidden" name="plan_amount" id="plan_amount">
                         
                         <button type="submit" name="submit_application" class="become-seller-btn mt-4" id="submitBtn" disabled>
-                            Submit Application & Proceed to Payment
+                            Select a Plan to Continue
                         </button>
                     </form>
                     
@@ -770,8 +800,11 @@ function selectPlanCard(card, planName, amount) {
     
     document.getElementById('selected_plan').value = planName;
     document.getElementById('plan_amount').value = amount;
-    document.getElementById('submitBtn').disabled = false;
-    document.getElementById('submitBtn').innerHTML = 'Submit Application & Pay KSH ' + amount.toLocaleString();
+    
+    const submitBtn = document.getElementById('submitBtn');
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = 'Submit Application & Pay KSH ' + amount.toLocaleString();
+    submitBtn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
 }
 
 function selectPaymentMethod(card, method) {
@@ -790,7 +823,9 @@ function selectPaymentMethod(card, method) {
     
     const payBtn = document.getElementById('payBtn');
     payBtn.disabled = false;
-    payBtn.innerHTML = 'Pay KSH <?= number_format($temp_app['amount'] ?? 0) ?> via ' + method;
+    const amount = <?= json_encode(number_format($temp_app['amount'] ?? 0)) ?>;
+    payBtn.innerHTML = 'Pay KSH ' + amount + ' via ' + method;
+    payBtn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
 }
 
 // Phone formatting

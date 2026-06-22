@@ -20,7 +20,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($subject) || empty($category) || empty($message)) {
         flash('Please fill all fields.', 'danger');
     } else {
-        // Save to database (create support_tickets table)
         $sql = "INSERT INTO support_tickets (user_id, subject, category, message, status, created_at) 
                 VALUES (?, ?, ?, ?, 'open', NOW())";
         $stmt = $mysqli->prepare($sql);
@@ -39,7 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Get user's tickets if logged in
 $tickets = [];
 if ($is_logged_in) {
-    $sql = "SELECT * FROM support_tickets WHERE user_id = ? ORDER BY created_at DESC LIMIT 5";
+    $sql = "SELECT * FROM support_tickets WHERE user_id = ? ORDER BY created_at DESC";
     $stmt = $mysqli->prepare($sql);
     $stmt->bind_param('i', $user['id']);
     $stmt->execute();
@@ -184,34 +183,47 @@ if ($is_logged_in) {
     margin-right: 8px;
 }
 
-/* ---------- TICKETS ---------- */
+/* ---------- TICKETS - UPDATED FOR ADMIN REPLY ---------- */
 .ticket-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px 15px;
-    border-bottom: 1px solid #f1f5f9;
+    padding: 15px;
+    border: 1px solid #f1f5f9;
+    border-radius: 12px;
+    margin-bottom: 12px;
     transition: all 0.3s ease;
+    background: #fff;
 }
 
 .ticket-item:hover {
-    background: #f8fafc;
+    border-color: #d1d5db;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
 }
 
 .ticket-item:last-child {
-    border-bottom: none;
+    margin-bottom: 0;
+}
+
+.ticket-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 8px;
 }
 
 .ticket-info .ticket-subject {
     font-weight: 600;
     color: #1f2937;
-    font-size: 0.9rem;
+    font-size: 0.95rem;
 }
 
 .ticket-info .ticket-meta {
     font-size: 0.75rem;
     color: #6b7280;
-    margin-top: 2px;
+    margin-top: 3px;
+}
+
+.ticket-info .ticket-meta span {
+    margin-right: 12px;
 }
 
 .ticket-status {
@@ -219,12 +231,62 @@ if ($is_logged_in) {
     border-radius: 50px;
     font-size: 0.7rem;
     font-weight: 600;
+    white-space: nowrap;
 }
 
 .ticket-status.open { background: #fef3c7; color: #d97706; }
 .ticket-status.in-progress { background: #dbeafe; color: #2563eb; }
 .ticket-status.resolved { background: #d1fae5; color: #059669; }
 .ticket-status.closed { background: #e5e7eb; color: #6b7280; }
+
+/* Ticket Message */
+.ticket-message-box {
+    margin-top: 10px;
+    padding: 12px 16px;
+    background: #f8fafc;
+    border-radius: 8px;
+    border-left: 3px solid #2563eb;
+    font-size: 0.9rem;
+    color: #1f2937;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+/* Admin Reply Section */
+.ticket-reply {
+    margin-top: 10px;
+    padding: 12px 16px;
+    background: #f0fdf4;
+    border-radius: 8px;
+    border-left: 3px solid #10b981;
+    position: relative;
+}
+
+.ticket-reply .reply-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #059669;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+}
+
+.ticket-reply .reply-label i {
+    margin-right: 4px;
+}
+
+.ticket-reply .reply-content {
+    font-size: 0.9rem;
+    color: #1f2937;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.ticket-reply .reply-date {
+    font-size: 0.65rem;
+    color: #6b7280;
+    margin-top: 4px;
+}
 
 .no-tickets {
     text-align: center;
@@ -339,6 +401,11 @@ if ($is_logged_in) {
     .contact-info-grid {
         grid-template-columns: 1fr;
     }
+    
+    .ticket-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
 }
 
 @media (max-width: 480px) {
@@ -347,9 +414,7 @@ if ($is_logged_in) {
     }
     
     .ticket-item {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 8px;
+        padding: 12px;
     }
 }
 </style>
@@ -392,7 +457,7 @@ if ($is_logged_in) {
                         <i class="fa-regular fa-envelope"></i>
                         <div>
                             <div class="contact-label">Email</div>
-                            <div class="contact-value"><?= ADMIN_EMAIL ?></div>
+                            <div class="contact-value"><?= defined('ADMIN_EMAIL') ? ADMIN_EMAIL : 'admin@marketplace.local' ?></div>
                         </div>
                     </div>
                     <div class="contact-item">
@@ -472,7 +537,7 @@ if ($is_logged_in) {
             </div>
             
             <!-- ==========================================
-                 MY TICKETS
+                 MY TICKETS - WITH ADMIN REPLY
             ========================================== -->
             <?php if ($is_logged_in): ?>
             <div class="support-card">
@@ -481,25 +546,77 @@ if ($is_logged_in) {
                 </div>
                 
                 <?php if ($tickets && $tickets->num_rows > 0): ?>
-                    <?php while ($ticket = $tickets->fetch_assoc()): ?>
+                    <?php while ($ticket = $tickets->fetch_assoc()): 
+                        $has_reply = !empty($ticket['admin_reply']);
+                    ?>
                         <div class="ticket-item">
-                            <div class="ticket-info">
-                                <div class="ticket-subject"><?= sanitize($ticket['subject']) ?></div>
-                                <div class="ticket-meta">
-                                    <span><?= sanitize($ticket['category']) ?></span>
-                                    <span>•</span>
-                                    <span><?= date('M d, Y', strtotime($ticket['created_at'])) ?></span>
+                            <div class="ticket-header">
+                                <div class="ticket-info">
+                                    <div class="ticket-subject"><?= sanitize($ticket['subject']) ?></div>
+                                    <div class="ticket-meta">
+                                        <span><i class="fa-regular fa-folder"></i> <?= ucfirst(sanitize($ticket['category'])) ?></span>
+                                        <span><i class="fa-regular fa-calendar"></i> <?= date('M d, Y', strtotime($ticket['created_at'])) ?></span>
+                                        <?php if ($ticket['updated_at']): ?>
+                                            <span><i class="fa-regular fa-clock"></i> Updated: <?= date('M d, Y', strtotime($ticket['updated_at'])) ?></span>
+                                        <?php endif; ?>
+                                    </div>
                                 </div>
+                                <span class="ticket-status <?= $ticket['status'] ?>">
+                                    <?php 
+                                    $status_labels = [
+                                        'open' => 'Open',
+                                        'in-progress' => 'In Progress',
+                                        'resolved' => 'Resolved',
+                                        'closed' => 'Closed'
+                                    ];
+                                    echo $status_labels[$ticket['status']] ?? ucfirst($ticket['status']);
+                                    ?>
+                                </span>
                             </div>
-                            <span class="ticket-status <?= $ticket['status'] ?>">
-                                <?= ucfirst($ticket['status']) ?>
-                            </span>
+                            
+                            <!-- Original Message -->
+                            <div class="ticket-message-box">
+                                <?= nl2br(sanitize($ticket['message'])) ?>
+                            </div>
+                            
+                            <!-- Admin Reply (if exists) -->
+                            <?php if ($has_reply): ?>
+                                <div class="ticket-reply">
+                                    <div class="reply-label">
+                                        <i class="fa-regular fa-reply"></i> Admin Reply
+                                    </div>
+                                    <div class="reply-content">
+                                        <?= nl2br(sanitize($ticket['admin_reply'])) ?>
+                                    </div>
+                                    <?php if ($ticket['updated_at']): ?>
+                                        <div class="reply-date">
+                                            <i class="fa-regular fa-clock"></i> <?= date('M d, Y h:i A', strtotime($ticket['updated_at'])) ?>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
+                            <?php endif; ?>
+                            
+                            <!-- Status badge for user -->
+                            <?php if ($ticket['status'] == 'resolved'): ?>
+                                <div style="margin-top: 8px; font-size: 0.75rem; color: #059669;">
+                                    <i class="fa-regular fa-circle-check"></i> This ticket has been resolved.
+                                </div>
+                            <?php elseif ($ticket['status'] == 'closed'): ?>
+                                <div style="margin-top: 8px; font-size: 0.75rem; color: #6b7280;">
+                                    <i class="fa-regular fa-circle-check"></i> This ticket is closed.
+                                </div>
+                            <?php elseif ($has_reply): ?>
+                                <div style="margin-top: 8px; font-size: 0.75rem; color: #2563eb;">
+                                    <i class="fa-regular fa-reply"></i> Admin has replied to your ticket.
+                                </div>
+                            <?php endif; ?>
                         </div>
                     <?php endwhile; ?>
                 <?php else: ?>
                     <div class="no-tickets">
                         <i class="fa-regular fa-ticket"></i>
                         <p>You haven't submitted any support tickets yet.</p>
+                        <p style="font-size: 0.85rem;">Submit a ticket above and we'll get back to you.</p>
                     </div>
                 <?php endif; ?>
             </div>

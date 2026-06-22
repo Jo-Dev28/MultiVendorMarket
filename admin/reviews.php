@@ -158,7 +158,7 @@ $reviews = $stmt->get_result();
                                         <?php else: ?>
                                             <span class="badge bg-danger">Rejected</span>
                                         <?php endif; ?>
-                                     </td
+                                        </td>
                                     <td><?= date('M d, Y', strtotime($review['created_at'])) ?></td>
                                     <td>
                                         <div class="d-flex gap-1">
@@ -170,8 +170,8 @@ $reviews = $stmt->get_result();
                                                 <a href="?action=delete&id=<?= $review['id'] ?>" class="btn btn-sm btn-danger" onclick="return confirm('Delete this review?')"><i class="fa-solid fa-trash"></i></a>
                                             <?php endif; ?>
                                         </div>
-                                     </td
-                                 </tr
+                                    </td>
+                                </tr>
                                 <?php endwhile; ?>
                                 <?php if ($reviews->num_rows == 0): ?>
                                     <tr><td colspan="8" class="text-center py-4">No reviews found.</td></tr>
