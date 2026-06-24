@@ -99,7 +99,7 @@ $display_verified = ($user['email_verified'] ?? 0) ? 'Verified' : 'Not Verified'
     }
     
     .profile-header {
-        background: linear-gradient(135deg, #2563eb, #1d4ed8);
+        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
         border-radius: 20px;
         padding: 30px;
         margin-bottom: 25px;

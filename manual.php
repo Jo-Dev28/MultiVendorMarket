@@ -192,6 +192,34 @@ $is_logged_in = isset($user['id']) && $user['id'];
     margin: 0;
 }
 
+/* ---------- SUCCESS BOX ---------- */
+.success-box {
+    background: #f0fdf4;
+    border: 1px solid #86efac;
+    border-radius: 12px;
+    padding: 15px 20px;
+    margin: 15px 0;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+}
+.success-box i {
+    color: #10b981;
+    font-size: 1.2rem;
+    margin-top: 2px;
+}
+.success-box .success-content h5 {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #065f46;
+    margin: 0 0 4px 0;
+}
+.success-box .success-content p {
+    font-size: 0.85rem;
+    color: #047857;
+    margin: 0;
+}
+
 /* ---------- SECTION DIVIDER ---------- */
 .section-divider {
     height: 2px;
@@ -442,6 +470,14 @@ $is_logged_in = isset($user['id']) && $user['id'];
                             <p>Always check product ratings and read customer reviews before making a purchase.</p>
                         </div>
                     </div>
+                    
+                    <div class="tip-box">
+                        <i class="fa-regular fa-lightbulb"></i>
+                        <div class="tip-content">
+                            <h5>Pro Tip</h5>
+                            <p>Use the compare feature to compare multiple products side by side before deciding.</p>
+                        </div>
+                    </div>
                 </div>
                 
                 <div class="section-divider"></div>
@@ -531,11 +567,11 @@ $is_logged_in = isset($user['id']) && $user['id'];
                         </div>
                     </div>
                     
-                    <div class="tip-box">
+                    <div class="success-box">
                         <i class="fa-regular fa-circle-check"></i>
-                        <div class="tip-content">
-                            <h5>Pro Tip</h5>
-                            <p>Combine multiple items from the same seller to save on shipping costs.</p>
+                        <div class="success-content">
+                            <h5>Free Shipping!</h5>
+                            <p>Spend KSH 5,000 or more and enjoy free shipping on your entire order.</p>
                         </div>
                     </div>
                 </div>
@@ -622,7 +658,7 @@ $is_logged_in = isset($user['id']) && $user['id'];
                     <div class="warning-box">
                         <i class="fa-solid fa-triangle-exclamation"></i>
                         <div class="warning-content">
-                            <h5>Important</h5>
+                            <h5>Non-Returnable Items</h5>
                             <p>Digital products, perishable items, and personalized products are non-returnable.</p>
                         </div>
                     </div>
@@ -659,6 +695,26 @@ $is_logged_in = isset($user['id']) && $user['id'];
                             <i class="fa-regular fa-message"></i>
                             <h5>Chat with Sellers</h5>
                             <p>Ask questions before buying</p>
+                        </div>
+                        <div class="feature-item">
+                            <i class="fa-solid fa-truck"></i>
+                            <h5>Order Tracking</h5>
+                            <p>Real-time order updates</p>
+                        </div>
+                        <div class="feature-item">
+                            <i class="fa-solid fa-shield-hart"></i>
+                            <h5>Buyer Protection</h5>
+                            <p>Shop with confidence</p>
+                        </div>
+                        <div class="feature-item">
+                            <i class="fa-solid fa-credit-card"></i>
+                            <h5>Secure Payments</h5>
+                            <p>Multiple payment options</p>
+                        </div>
+                        <div class="feature-item">
+                            <i class="fa-regular fa-star"></i>
+                            <h5>Product Reviews</h5>
+                            <p>Share your experience</p>
                         </div>
                     </div>
                 </div>
@@ -703,7 +759,7 @@ $is_logged_in = isset($user['id']) && $user['id'];
                             <i class="fa-regular fa-headset"></i>
                             <span>Help & Support</span>
                         </a>
-                        <a href="become-seller.php" class="quick-link-item">
+                        <a href="become_seller.php" class="quick-link-item">
                             <i class="fa-solid fa-store"></i>
                             <span>Become a Seller</span>
                         </a>
@@ -722,9 +778,14 @@ $is_logged_in = isset($user['id']) && $user['id'];
                         <p style="color: #6b7280; margin-bottom: 15px;">
                             If you have any questions or need assistance, our support team is here to help.
                         </p>
-                        <a href="support.php" class="btn" style="background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; padding: 10px 30px; border-radius: 10px; text-decoration: none; font-weight: 600; display: inline-block;">
-                            <i class="fa-regular fa-envelope"></i> Contact Support
-                        </a>
+                        <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                            <a href="support.php" class="btn" style="background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; padding: 10px 30px; border-radius: 10px; text-decoration: none; font-weight: 600;">
+                                <i class="fa-regular fa-envelope"></i> Contact Support
+                            </a>
+                            <a href="faq.php" class="btn" style="background: #f3f4f6; color: #374151; padding: 10px 30px; border-radius: 10px; text-decoration: none; font-weight: 600;">
+                                <i class="fa-regular fa-circle-question"></i> Visit FAQ
+                            </a>
+                        </div>
                     </div>
                 </div>
                 

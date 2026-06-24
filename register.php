@@ -19,6 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $confirm = $_POST['confirm_password'] ?? '';
     $phone = sanitize($_POST['phone'] ?? '');
     $address = sanitize($_POST['address'] ?? '');
+    $agree_terms = isset($_POST['agree_terms']) ? true : false;
     
     $errors = [];
     
@@ -37,6 +38,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($password !== $confirm) {
         $errors[] = 'Passwords do not match.';
     }
+    if (!$agree_terms) {
+        $errors[] = 'You must agree to the Terms and Conditions.';
+    }
     
     if (empty($errors)) {
         if (get_user_by_email($mysqli, $email)) {
@@ -51,7 +55,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->bind_param('ssssss', $name, $email, $hash, $phone, $address, $token);
             
             if ($stmt->execute()) {
-                // Store verification token in session for demo
                 $_SESSION['verification_simulated'] = "Verification token: $token";
                 
                 flash('Registration successful! Please check your email to verify your account.', 'success');
@@ -226,6 +229,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         box-shadow: 0 10px 20px rgba(37, 99, 235, 0.3);
     }
     
+    .btn-register:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none !important;
+    }
+    
     .login-link {
         text-align: center;
         margin-top: 25px;
@@ -258,12 +267,320 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         margin-right: 5px;
     }
     
+    /* Terms Checkbox Styles */
+    .terms-checkbox {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        margin-top: 5px;
+    }
+    
+    .terms-checkbox input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        margin-top: 3px;
+        cursor: pointer;
+        accent-color: #2563eb;
+        flex-shrink: 0;
+        /* Remove required attribute styling */
+    }
+    
+    .terms-checkbox label {
+        font-size: 0.85rem;
+        color: #4b5563;
+        cursor: pointer;
+        line-height: 1.5;
+    }
+    
+    .terms-checkbox label .terms-link {
+        color: #2563eb;
+        text-decoration: none;
+        font-weight: 600;
+        cursor: pointer;
+    }
+    
+    .terms-checkbox label .terms-link:hover {
+        text-decoration: underline;
+    }
+    
+    .terms-checkbox .required-star {
+        color: #ef4444;
+    }
+    
+    .terms-error {
+        color: #ef4444;
+        font-size: 0.8rem;
+        margin-top: 5px;
+        display: none;
+    }
+    
+    .terms-error.show {
+        display: block;
+    }
+    
+    /* ============================================
+       TERMS MODAL - ENHANCED DESIGN
+    ============================================ */
+    .terms-modal .modal-content {
+        border-radius: 20px;
+        border: none;
+        overflow: hidden;
+        max-height: 90vh;
+        box-shadow: 0 25px 60px rgba(0,0,0,0.3);
+    }
+    
+    .terms-modal .modal-header {
+        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+        color: white;
+        padding: 20px 25px;
+        border: none;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .terms-modal .modal-header::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -20%;
+        width: 300px;
+        height: 300px;
+        background: radial-gradient(circle, rgba(37,99,235,0.1) 0%, transparent 70%);
+        border-radius: 50%;
+    }
+    
+    .terms-modal .modal-header .modal-title {
+        font-weight: 700;
+        font-size: 1.2rem;
+        position: relative;
+        z-index: 1;
+    }
+    
+    .terms-modal .modal-header .modal-title i {
+        color: #f59e0b;
+        margin-right: 8px;
+    }
+    
+    .terms-modal .modal-header .btn-close {
+        filter: brightness(0) invert(1);
+        position: relative;
+        z-index: 1;
+    }
+    
+    .terms-modal .modal-header .modal-subtitle {
+        font-size: 0.8rem;
+        opacity: 0.7;
+        margin-top: 4px;
+        position: relative;
+        z-index: 1;
+    }
+    
+    .terms-modal .modal-body {
+        padding: 25px;
+        max-height: 55vh;
+        overflow-y: auto;
+        background: #fafbfc;
+    }
+    
+    .terms-modal .modal-body::-webkit-scrollbar {
+        width: 6px;
+    }
+    
+    .terms-modal .modal-body::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 10px;
+    }
+    
+    .terms-modal .modal-body::-webkit-scrollbar-thumb {
+        background: #2563eb;
+        border-radius: 10px;
+    }
+    
+    .terms-modal .modal-body::-webkit-scrollbar-thumb:hover {
+        background: #1d4ed8;
+    }
+    
+    .terms-modal .modal-body .terms-content {
+        font-size: 0.9rem;
+        color: #4b5563;
+        line-height: 1.8;
+    }
+    
+    .terms-modal .modal-body .terms-content .section-number {
+        display: inline-block;
+        background: linear-gradient(135deg, #2563eb, #1d4ed8);
+        color: white;
+        padding: 1px 12px;
+        border-radius: 50px;
+        font-size: 0.65rem;
+        font-weight: 700;
+        margin-right: 8px;
+    }
+    
+    .terms-modal .modal-body .terms-content .section-title {
+        color: #1f2937;
+        font-weight: 700;
+        font-size: 1rem;
+        margin-top: 20px;
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+    }
+    
+    .terms-modal .modal-body .terms-content .section-title:first-child {
+        margin-top: 0;
+    }
+    
+    .terms-modal .modal-body .terms-content .section-title i {
+        color: #f59e0b;
+        margin-right: 8px;
+        font-size: 0.9rem;
+    }
+    
+    .terms-modal .modal-body .terms-content p {
+        margin-bottom: 8px;
+        padding-left: 28px;
+    }
+    
+    .terms-modal .modal-body .terms-content ul {
+        padding-left: 45px;
+        margin: 6px 0 10px 0;
+    }
+    
+    .terms-modal .modal-body .terms-content ul li {
+        margin-bottom: 4px;
+        list-style-type: none;
+        position: relative;
+        padding-left: 20px;
+    }
+    
+    .terms-modal .modal-body .terms-content ul li::before {
+        content: '▸';
+        color: #2563eb;
+        position: absolute;
+        left: 0;
+        font-weight: 700;
+    }
+    
+    .terms-modal .modal-body .terms-content .highlight-box {
+        background: #eff6ff;
+        border-radius: 10px;
+        padding: 12px 16px;
+        margin: 12px 0;
+        border-left: 3px solid #2563eb;
+        padding-left: 20px;
+    }
+    
+    .terms-modal .modal-body .terms-content .highlight-box strong {
+        color: #1e40af;
+    }
+    
+    .terms-modal .modal-body .terms-content .divider {
+        height: 1px;
+        background: linear-gradient(90deg, #e5e7eb, transparent);
+        margin: 15px 0;
+    }
+    
+    .terms-scroll-indicator {
+        text-align: center;
+        padding: 10px;
+        background: #f8fafc;
+        border-radius: 10px;
+        margin-top: 15px;
+        border: 1px solid #e5e7eb;
+        transition: all 0.3s ease;
+        font-size: 0.85rem;
+    }
+    
+    .terms-scroll-indicator i {
+        margin-right: 6px;
+    }
+    
+    .terms-scroll-indicator.complete {
+        background: #f0fdf4;
+        border-color: #86efac;
+        color: #065f46;
+    }
+    
+    .terms-scroll-indicator.complete i {
+        color: #10b981;
+    }
+    
+    .terms-modal .modal-footer {
+        padding: 15px 25px;
+        border-top: 1px solid #e5e7eb;
+        background: white;
+        border-radius: 0 0 20px 20px;
+    }
+    
+    .terms-modal .modal-footer .btn-agree {
+        background: linear-gradient(135deg, #2563eb, #1d4ed8);
+        color: white;
+        border: none;
+        padding: 10px 30px;
+        border-radius: 10px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .terms-modal .modal-footer .btn-agree:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(37,99,235,0.3);
+    }
+    
+    .terms-modal .modal-footer .btn-agree:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none !important;
+    }
+    
+    .terms-modal .modal-footer .btn-close-modal {
+        background: #f3f4f6;
+        color: #374151;
+        border: none;
+        padding: 10px 30px;
+        border-radius: 10px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .terms-modal .modal-footer .btn-close-modal:hover {
+        background: #e5e7eb;
+    }
+    
     @media (max-width: 768px) {
         .register-body {
             padding: 25px;
         }
         .register-header h2 {
             font-size: 1.5rem;
+        }
+        .terms-checkbox {
+            align-items: flex-start;
+        }
+        .terms-modal .modal-body {
+            padding: 15px;
+            max-height: 50vh;
+        }
+        .terms-modal .modal-body .terms-content ul {
+            padding-left: 25px;
+        }
+        .terms-modal .modal-body .terms-content p {
+            padding-left: 15px;
+        }
+        .terms-modal .modal-footer {
+            flex-direction: column;
+            gap: 10px;
+        }
+        .terms-modal .modal-footer .btn-agree,
+        .terms-modal .modal-footer .btn-close-modal {
+            width: 100%;
+            justify-content: center;
         }
     }
 </style>
@@ -282,12 +599,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                     
                     <div class="register-body">
-                        <form method="post" novalidate>
+                        <form method="post" novalidate id="registerForm">
                             <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
                             
                             <div class="form-group">
                                 <label class="form-label">
-                                    <i class="fa-regular fa-user"></i> Full Name
+                                    <i class="fa-regular fa-user"></i> Full Name <span class="text-danger">*</span>
                                 </label>
                                 <div class="input-group-custom">
                                     <i class="fa-regular fa-user"></i>
@@ -297,7 +614,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             
                             <div class="form-group">
                                 <label class="form-label">
-                                    <i class="fa-regular fa-envelope"></i> Email Address
+                                    <i class="fa-regular fa-envelope"></i> Email Address <span class="text-danger">*</span>
                                 </label>
                                 <div class="input-group-custom">
                                     <i class="fa-regular fa-envelope"></i>
@@ -317,7 +634,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             
                             <div class="form-group">
                                 <label class="form-label">
-                                    <i class="fa-solid fa-lock"></i> Password
+                                    <i class="fa-solid fa-lock"></i> Password <span class="text-danger">*</span>
                                 </label>
                                 <div class="input-group-custom">
                                     <i class="fa-solid fa-lock"></i>
@@ -330,7 +647,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             
                             <div class="form-group">
                                 <label class="form-label">
-                                    <i class="fa-solid fa-lock"></i> Confirm Password
+                                    <i class="fa-solid fa-lock"></i> Confirm Password <span class="text-danger">*</span>
                                 </label>
                                 <div class="input-group-custom">
                                     <i class="fa-solid fa-lock"></i>
@@ -345,7 +662,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <textarea name="address" class="form-control" rows="2" placeholder="Your address (optional)"></textarea>
                             </div>
                             
-                            <button type="submit" class="btn-register">
+                            <!-- Terms and Conditions Checkbox - NO REQUIRED ATTRIBUTE -->
+                            <div class="form-group">
+                                <div class="terms-checkbox">
+                                    <input type="checkbox" name="agree_terms" id="agreeTerms" value="1">
+                                    <label for="agreeTerms">
+                                        I agree to the <span class="terms-link" onclick="openTermsModal()">Terms and Conditions</span> 
+                                        and <a href="privacy.php" target="_blank">Privacy Policy</a> 
+                                        <span class="required-star">*</span>
+                                    </label>
+                                </div>
+                                <div class="terms-error" id="termsError">
+                                    <i class="fa-solid fa-circle-exclamation"></i> Please agree to the Terms and Conditions to continue.
+                                </div>
+                            </div>
+                            
+                            <button type="submit" class="btn-register" id="registerBtn">
                                 <i class="fa-solid fa-arrow-right-to-bracket"></i> Create Account
                             </button>
                         </form>
@@ -360,25 +692,379 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
 </div>
 
-<script>
-// Password confirmation validation
-const form = document.querySelector('form');
-const password = document.getElementById('password');
-const confirmPassword = document.querySelector('[name="confirm_password"]');
+<!-- ============================================
+     TERMS AND CONDITIONS MODAL - ENHANCED
+============================================ -->
+<div class="modal fade terms-modal" id="termsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <h5 class="modal-title"><i class="fa-regular fa-file-lines"></i> Terms and Conditions</h5>
+                    <div class="modal-subtitle">Please read carefully before creating your account</div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="terms-content">
+                    <!-- Section 1 -->
+                    <div class="section-title">
+                        <span class="section-number">1</span>
+                        <i class="fa-regular fa-circle-check"></i> Acceptance of Terms
+                    </div>
+                    <p>By creating an account and using <?= SITE_NAME ?>, you agree to be bound by these Terms and Conditions. If you do not agree, please do not use our platform.</p>
+                    
+                    <div class="divider"></div>
+                    
+                    <!-- Section 2 -->
+                    <div class="section-title">
+                        <span class="section-number">2</span>
+                        <i class="fa-regular fa-user"></i> Account Registration
+                    </div>
+                    <p>You must provide accurate and complete information when creating your account.</p>
+                    <ul>
+                        <li>You must be at least <strong>18 years old</strong> to create an account</li>
+                        <li>You are responsible for all activities under your account</li>
+                        <li>Notify us immediately of any unauthorized use</li>
+                        <li>Keep your password secure and confidential</li>
+                    </ul>
+                    
+                    <div class="divider"></div>
+                    
+                    <!-- Section 3 -->
+                    <div class="section-title">
+                        <span class="section-number">3</span>
+                        <i class="fa-solid fa-box"></i> Products and Listings
+                    </div>
+                    <p>Sellers are responsible for the accuracy of their product listings.</p>
+                    <ul>
+                        <li>Product descriptions must be <strong>accurate and complete</strong></li>
+                        <li>Products must be <strong>authentic</strong> and not counterfeit</li>
+                        <li>Prohibited items are <strong>not allowed</strong> on the platform</li>
+                        <li>Sellers must ensure product availability</li>
+                    </ul>
+                    
+                    <div class="divider"></div>
+                    
+                    <!-- Section 4 -->
+                    <div class="section-title">
+                        <span class="section-number">4</span>
+                        <i class="fa-solid fa-truck"></i> Orders and Purchases
+                    </div>
+                    <p>When you place an order, you enter into a contract with the seller.</p>
+                    <ul>
+                        <li>Orders may be <strong>cancelled</strong> before processing</li>
+                        <li>Disputes must be resolved <strong>directly with the seller</strong></li>
+                        <li>You will receive <strong>order confirmation</strong> via email</li>
+                        <li>Track your orders in <strong>"My Orders"</strong></li>
+                    </ul>
+                    
+                    <div class="divider"></div>
+                    
+                    <!-- Section 5 -->
+                    <div class="section-title">
+                        <span class="section-number">5</span>
+                        <i class="fa-solid fa-credit-card"></i> Payments
+                    </div>
+                    <p>We accept multiple payment methods for your convenience.</p>
+                    <ul>
+                        <li><strong>M-Pesa</strong> - Mobile money payments</li>
+                        <li><strong>Credit/Debit Cards</strong> - Visa and Mastercard</li>
+                        <li><strong>Bank Transfer</strong> - Direct bank payments</li>
+                        <li><strong>PayPal</strong> - International payments</li>
+                    </ul>
+                    <div class="highlight-box">
+                        <i class="fa-solid fa-lock" style="color:#2563eb;"></i>
+                        <strong>All transactions are encrypted and secure.</strong> We do not store your payment information.
+                    </div>
+                    
+                    <div class="divider"></div>
+                    
+                    <!-- Section 6 -->
+                    <div class="section-title">
+                        <span class="section-number">6</span>
+                        <i class="fa-solid fa-truck-fast"></i> Shipping and Delivery
+                    </div>
+                    <p>Sellers are responsible for shipping. Delivery times vary by location.</p>
+                    <ul>
+                        <li><strong>Free shipping</strong> on orders over KSH 5,000</li>
+                        <li>Tracking numbers provided for <strong>all shipped orders</strong></li>
+                        <li>Ensure your <strong>shipping address is accurate</strong></li>
+                        <li>Delivery takes <strong>2-5 business days</strong></li>
+                    </ul>
+                    
+                    <div class="divider"></div>
+                    
+                    <!-- Section 7 -->
+                    <div class="section-title">
+                        <span class="section-number">7</span>
+                        <i class="fa-solid fa-rotate-left"></i> Returns and Refunds
+                    </div>
+                    <p>Returns are accepted within <strong>7 days</strong> of delivery.</p>
+                    <ul>
+                        <li>Items must be <strong>unused and in original packaging</strong></li>
+                        <li>Return shipping is the <strong>customer's responsibility</strong></li>
+                        <li>Refunds processed <strong>after inspection</strong> (3-5 business days)</li>
+                        <li><strong>Non-returnable:</strong> Digital products, perishable items</li>
+                    </ul>
+                    
+                    <div class="divider"></div>
+                    
+                    <!-- Section 8 -->
+                    <div class="section-title">
+                        <span class="section-number">8</span>
+                        <i class="fa-solid fa-shield-hart"></i> Liability
+                    </div>
+                    <p><?= SITE_NAME ?> is provided "as is" without warranties of any kind.</p>
+                    <ul>
+                        <li>We are <strong>not liable</strong> for indirect or consequential damages</li>
+                        <li>We do not guarantee <strong>uninterrupted service</strong></li>
+                        <li>Third-party links are <strong>not our responsibility</strong></li>
+                    </ul>
+                    
+                    <div class="divider"></div>
+                    
+                    <!-- Section 9 -->
+                    <div class="section-title">
+                        <span class="section-number">9</span>
+                        <i class="fa-solid fa-lock"></i> Privacy Policy
+                    </div>
+                    <p>We are committed to protecting your privacy.</p>
+                    <ul>
+                        <li>Your personal information is <strong>securely stored</strong></li>
+                        <li>We do not <strong>sell or share</strong> your data with third parties</li>
+                        <li>View our full <a href="privacy.php" target="_blank" style="color:#2563eb; text-decoration:none; font-weight:600;">Privacy Policy</a> for more details</li>
+                    </ul>
+                    
+                    <div class="divider"></div>
+                    
+                    <!-- Section 10 -->
+                    <div class="section-title">
+                        <span class="section-number">10</span>
+                        <i class="fa-regular fa-headset"></i> Contact Us
+                    </div>
+                    <p>If you have any questions about these terms, please contact us:</p>
+                    <ul>
+                        <li><strong>Email:</strong> support@multivendorhub.com</li>
+                        <li><strong>Phone:</strong> +254 700 000 000</li>
+                        <li><strong>Live Chat:</strong> Available 24/7</li>
+                    </ul>
+                    
+                    <div class="terms-scroll-indicator" id="scrollIndicator">
+                        <i class="fa-regular fa-circle-check"></i> Please scroll to the bottom to agree
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-close-modal" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn-agree" id="agreeTermsBtn" disabled>
+                    <i class="fa-regular fa-circle-check"></i> I Agree to Terms
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
-if (form && password && confirmPassword) {
-    form.addEventListener('submit', function(e) {
-        if (password.value !== confirmPassword.value) {
-            e.preventDefault();
-            Swal.fire({
-                icon: 'warning',
-                title: 'Password Mismatch',
-                text: 'Your passwords do not match. Please try again.',
-                confirmButtonColor: '#f59e0b'
-            });
-        }
-    });
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+// ============================================
+// TERMS MODAL FUNCTIONS
+// ============================================
+let termsAgreed = false;
+
+function openTermsModal() {
+    const modal = new bootstrap.Modal(document.getElementById('termsModal'));
+    modal.show();
+    
+    // Reset agree button
+    const agreeBtn = document.getElementById('agreeTermsBtn');
+    agreeBtn.disabled = true;
+    termsAgreed = false;
+    
+    // Reset the modal body scroll position
+    const modalBody = document.querySelector('#termsModal .modal-body');
+    if (modalBody) {
+        modalBody.scrollTop = 0;
+    }
+    
+    // Reset scroll indicator
+    const indicator = document.getElementById('scrollIndicator');
+    if (indicator) {
+        indicator.classList.remove('complete');
+        indicator.innerHTML = '<i class="fa-regular fa-circle-check"></i> Please scroll to the bottom to agree';
+    }
 }
+
+// Enable agree button when scrolled to bottom
+document.addEventListener('DOMContentLoaded', function() {
+    const modalBody = document.querySelector('#termsModal .modal-body');
+    const agreeBtn = document.getElementById('agreeTermsBtn');
+    const termsCheckbox = document.getElementById('agreeTerms');
+    const indicator = document.getElementById('scrollIndicator');
+    
+    if (modalBody) {
+        modalBody.addEventListener('scroll', function() {
+            // Check if scrolled to bottom (with 20px tolerance)
+            const isBottom = this.scrollHeight - this.scrollTop - this.clientHeight < 20;
+            if (isBottom) {
+                agreeBtn.disabled = false;
+                if (indicator) {
+                    indicator.classList.add('complete');
+                    indicator.innerHTML = '<i class="fa-regular fa-circle-check"></i> You have read the terms. Click "I Agree" to accept.';
+                }
+            } else {
+                agreeBtn.disabled = true;
+                if (indicator) {
+                    indicator.classList.remove('complete');
+                    indicator.innerHTML = '<i class="fa-regular fa-circle-check"></i> Please scroll to the bottom to agree';
+                }
+            }
+        });
+    }
+    
+    // Agree button click handler
+    if (agreeBtn) {
+        agreeBtn.addEventListener('click', function() {
+            termsAgreed = true;
+            if (termsCheckbox) {
+                termsCheckbox.checked = true;
+                // Trigger change event
+                termsCheckbox.dispatchEvent(new Event('change'));
+                // Also trigger click event to ensure form validation updates
+                termsCheckbox.dispatchEvent(new Event('click'));
+            }
+            // Close modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('termsModal'));
+            if (modal) modal.hide();
+            
+            // Show success feedback
+            Swal.fire({
+                icon: 'success',
+                title: 'Terms Accepted',
+                text: 'You have agreed to the Terms and Conditions.',
+                timer: 1500,
+                showConfirmButton: false,
+                toast: true,
+                position: 'top-end'
+            });
+        });
+    }
+    
+    // ============================================
+    // FIX: Reset checkbox state when modal is closed without agreeing
+    // ============================================
+    const termsModal = document.getElementById('termsModal');
+    if (termsModal) {
+        termsModal.addEventListener('hidden.bs.modal', function() {
+            // If user closed modal without agreeing, uncheck the checkbox
+            if (!termsAgreed) {
+                if (termsCheckbox) {
+                    termsCheckbox.checked = false;
+                    termsCheckbox.dispatchEvent(new Event('change'));
+                }
+                // Reset the error message if it was showing
+                const termsError = document.getElementById('termsError');
+                if (termsError) {
+                    termsError.classList.remove('show');
+                }
+            }
+        });
+    }
+});
+
+// ============================================
+// FORM VALIDATION
+// ============================================
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('registerForm');
+    const password = document.getElementById('password');
+    const confirmPassword = document.querySelector('[name="confirm_password"]');
+    const agreeTerms = document.getElementById('agreeTerms');
+    const termsError = document.getElementById('termsError');
+    
+    // Terms checkbox validation on submit
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            let hasError = false;
+            
+            // Check terms agreement
+            if (!agreeTerms.checked) {
+                termsError.classList.add('show');
+                hasError = true;
+            } else {
+                termsError.classList.remove('show');
+            }
+            
+            // Check password match
+            if (password && confirmPassword && password.value !== confirmPassword.value) {
+                e.preventDefault();
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Password Mismatch',
+                    text: 'Your passwords do not match. Please try again.',
+                    confirmButtonColor: '#f59e0b'
+                });
+                return false;
+            }
+            
+            // Check password length
+            if (password && password.value.length > 0 && password.value.length < 6) {
+                e.preventDefault();
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Password Too Short',
+                    text: 'Password must be at least 6 characters long.',
+                    confirmButtonColor: '#f59e0b'
+                });
+                return false;
+            }
+            
+            if (hasError) {
+                e.preventDefault();
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Terms Required',
+                    text: 'Please agree to the Terms and Conditions to continue.',
+                    confirmButtonColor: '#2563eb'
+                });
+                return false;
+            }
+        });
+    }
+    
+    // Hide terms error when checkbox is checked
+    if (agreeTerms) {
+        agreeTerms.addEventListener('change', function() {
+            if (this.checked) {
+                termsError.classList.remove('show');
+            }
+        });
+    }
+    
+    // Real-time password match validation
+    if (password && confirmPassword) {
+        confirmPassword.addEventListener('input', function() {
+            if (password.value && this.value) {
+                if (password.value !== this.value) {
+                    this.style.borderColor = '#ef4444';
+                    this.style.boxShadow = '0 0 0 3px rgba(239, 68, 68, 0.1)';
+                } else {
+                    this.style.borderColor = '#10b981';
+                    this.style.boxShadow = '0 0 0 3px rgba(16, 185, 129, 0.1)';
+                }
+            } else {
+                this.style.borderColor = '#e5e7eb';
+                this.style.boxShadow = 'none';
+            }
+        });
+    }
+});
+
+// Open terms modal when clicking the terms link
+document.querySelector('.terms-link')?.addEventListener('click', function(e) {
+    e.preventDefault();
+    openTermsModal();
+});
 </script>
 
 <?php require_once 'includes/footer.php'; ?>

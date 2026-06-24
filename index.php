@@ -110,8 +110,10 @@ $category_icons = [
     --shadow: 0 4px 20px rgba(0,0,0,0.08);
     --shadow-hover: 0 12px 40px rgba(0,0,0,0.12);
     --radius: 20px;
-    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    -
+    -transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
+
 
 /* Badges */
 .flash-badge {

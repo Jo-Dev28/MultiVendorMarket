@@ -346,7 +346,8 @@ function is_active($link, $current_page, $current_path) {
             <li><a href="<?= BASE_URL ?>seller/dashboard.php" class="<?= strpos($current_path, 'seller/dashboard.php') !== false ? 'active' : '' ?>"><i class="fa-solid fa-chart-line"></i><span>Seller Dashboard</span></a></li>
             <li><a href="<?= BASE_URL ?>seller/my_shop.php" class="<?= strpos($current_path, 'seller/my_shop.php') !== false ? 'active' : '' ?>"><i class="fa-solid fa-store"></i><span>My Shop</span><span class="badge-view">View</span></a></li>
             <li><a href="<?= BASE_URL ?>seller/add_product.php" class="<?= strpos($current_path, 'seller/add_product.php') !== false ? 'active' : '' ?>"><i class="fa-solid fa-plus-circle"></i><span>Add New Product</span></a></li>
-            <li><a href="<?= BASE_URL ?>seller/products.php" class="<?= strpos($current_path, 'seller/products.php') !== false ? 'active' : '' ?>"><i class="fa-solid fa-box"></i><span>Manage Products</span></a></li>
+            <li><a href="<?= BASE_URL ?>seller/products.php" class="<?= strpos($current_path, 'seller/products.php') !== false ? 'active' : '' ?>"><i class="fa-solid fa-box"></i><span>Manage Products</span></a></li>            
+            <li><a href="<?= BASE_URL ?>seller/reviews.php" class="<?= strpos($current_path, 'seller/reviews.php') !== false ? 'active' : '' ?>"><i class="fa-solid fa-star"></i><span>Products Reviews</span></a></li>
             <li><a href="<?= BASE_URL ?>seller/orders.php" class="<?= strpos($current_path, 'seller/orders.php') !== false ? 'active' : '' ?>"><i class="fa-solid fa-truck-fast"></i><span>Seller Orders</span></a></li>
             <li>
                 <a href="<?= BASE_URL ?>seller/chats.php" class="<?= strpos($current_path, 'seller/chats.php') !== false ? 'active' : '' ?>">

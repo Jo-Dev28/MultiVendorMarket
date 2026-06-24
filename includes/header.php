@@ -577,8 +577,8 @@ $is_seller = ($user['role'] ?? '') === 'seller';
                 </div>
                 <div class="col-md-6 text-end">
                     <a href="<?= BASE_URL ?>become-seller.php"><i class="fa-solid fa-store"></i> Become a Seller</a>
-                    <a href="<?= BASE_URL ?>help.php"><i class="fa-solid fa-headset"></i> Help Center</a>
-                    <a href="<?= BASE_URL ?>offers.php"><i class="fa-solid fa-percent"></i> Offers</a>
+                    <a href="<?= BASE_URL ?>support.php"><i class="fa-solid fa-headset"></i> Help Center</a>
+                    <a href="<?= BASE_URL ?>manual.php"><i class="fa-solid fa-book"></i> Manual</a>
                 </div>
             </div>
         </div>
