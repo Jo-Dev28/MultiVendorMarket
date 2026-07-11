@@ -77,7 +77,10 @@
             <div class="row align-items-center">
                 <div class="col-md-6">
                     <p class="mb-0">
-                        &copy; <?= date('Y') ?> <?= SITE_NAME ?>. All rights reserved.
+                        &copy; <?= date('Y') ?> <?= SITE_NAME ?>, 
+                        <a href="https://jonathanbosimwenda28.netlify.app/" target="_blank" rel="noopener noreferrer" style="text-decoration: none; color: #f59e0b;">
+                            Jonathan_Dev.
+                        </a>
                     </p>
                 </div>
                 <div class="col-md-6 text-md-end">

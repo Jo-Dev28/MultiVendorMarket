@@ -475,7 +475,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_comment'])) {
                     </div>
                     <h6 style="font-weight:700; margin-bottom:4px;"><?= sanitize($post['author_name']) ?></h6>
                     <p style="font-size:0.8rem; color:#6b7280;">Blog Author</p>
-                    <a href="#" class="btn btn-outline-primary btn-sm">
+                    <a href="blog.php" class="btn btn-outline-primary btn-sm">
                         <i class="fa-regular fa-eye"></i> View All Posts
                     </a>
                 </div>
