@@ -153,7 +153,7 @@ $has_products = $products->num_rows > 0;
     overflow:hidden
 }
 .product-card .product-img{
-    height:100%;
+    height:200%;
     width:100%;
     object-fit:contain;
     padding:10px

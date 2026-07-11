@@ -901,7 +901,7 @@ $total_documents = count($document_types);
                         <strong>Subscription Required!</strong>
                         <span class="ms-2">Your seller account is approved but you need to subscribe to start selling.</span>
                     </div>
-                    <a href="<?= BASE_URL ?>become_seller.php" class="btn-alert" style="background: #f59e0b; color: white;">
+                    <a href="<?= BASE_URL ?>become-seller.php" class="btn-alert" style="background: #f59e0b; color: white;">
                         <i class="fa-solid fa-credit-card"></i> Subscribe Now
                     </a>
                 </div>

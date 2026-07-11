@@ -421,9 +421,9 @@ $categories = $mysqli->query('SELECT c.*, COUNT(p.id) as product_count
     
     .product-image {
         width: 100%;
-        height: 100%;
+        height: 220%;
         object-fit: contain;
-        padding: 10px;
+        padding: 1px;
         transition: transform 0.5s ease;
     }
     

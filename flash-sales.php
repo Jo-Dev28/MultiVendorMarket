@@ -203,7 +203,7 @@ function get_progress($product) {
     overflow:hidden
 }
 .product-card .product-img{
-    height:100%;
+    height:200%;
     width:100%;
     object-fit:contain;
     padding:10px

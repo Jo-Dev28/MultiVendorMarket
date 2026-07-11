@@ -231,7 +231,7 @@ $category_icons = [
 
 .product-card-modern .product-img {
     width: 100%;
-    height: 100%;
+    height: 200%;
     object-fit: contain;
     background: var(--light-gray);
     transition: transform 0.5s ease;

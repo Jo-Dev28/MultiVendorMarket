@@ -274,6 +274,7 @@ $rating = round($seller['avg_rating'] ?? 0, 1);
 
 .product-card .product-img-container {
     height: 180px;
+    width: 100%;
     background: #f8fafc;
     display: flex;
     align-items: center;
@@ -282,7 +283,7 @@ $rating = round($seller['avg_rating'] ?? 0, 1);
 }
 
 .product-card .product-img {
-    height: 100%;
+    height: 180%;
     width: 100%;
     object-fit: contain;
     padding: 10px;
@@ -605,7 +606,7 @@ $rating = round($seller['avg_rating'] ?? 0, 1);
                         <?php while ($product = $products->fetch_assoc()): 
                             $has_image = !empty($product['image']) && file_exists('uploads/products/' . $product['image']);
                         ?>
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <div class="product-card">
                                     <div class="product-img-container">
                                         <?php if ($has_image): ?>
