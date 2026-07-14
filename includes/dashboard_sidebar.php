@@ -381,6 +381,8 @@ function is_active($link, $current_page, $current_path) {
             <li><a href="<?= BASE_URL ?>admin/chats.php"><i class="fa-solid fa-message"></i><span>Man Chats</span></a></li>
             <li><a href="<?= BASE_URL ?>admin/ai_logs.php"><i class="fa-solid fa-robot"></i><span>Man AI_Logs</span></a></li>
             <li><a href="<?= BASE_URL ?>admin/settings.php"><i class="fa-solid fa-gear"></i><span>Settings</span></a></li>
+            <li><a href="<?= BASE_URL ?>admin/backup.php"><i class="fa-solid fa-database"></i><span>Backups</span></a></li>
+            <li><a href="<?= BASE_URL ?>admin/manual.php"><i class="fa-solid fa-book"></i><span>Manual</span></a></li>
         <?php endif; ?>
         
         <li class="sidebar-divider"></li>

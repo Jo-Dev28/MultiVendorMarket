@@ -210,9 +210,12 @@ $is_seller = ($user['role'] ?? '') === 'seller';
             display: block;
         }
         
+        /* ============================================
+           SEARCH BOX - FIXED
+        ============================================ */
         .search-wrapper {
             width: 100%;
-            max-width: 450px;
+            max-width: 500px;
         }
         
         .search-box {
@@ -221,31 +224,67 @@ $is_seller = ($user['role'] ?? '') === 'seller';
             background: white;
             border-radius: 50px;
             overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+        
+        .search-box:focus-within {
+            border-color: #f59e0b;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.12);
         }
         
         .search-category {
             border: none;
-            padding: 10px 12px;
+            padding: 10px 14px;
             background: #f3f4f6;
             font-size: 0.8rem;
             border-right: 1px solid #e5e7eb;
             outline: none;
+            color: #374151;
+            cursor: pointer;
+            min-width: 130px;
+            font-weight: 500;
+        }
+        
+        .search-category:hover {
+            background: #e5e7eb;
         }
         
         .search-input {
             flex: 1;
             border: none;
-            padding: 10px 15px;
-            font-size: 0.85rem;
+            padding: 10px 16px;
+            font-size: 0.9rem;
             outline: none;
+            color: #1f2937;
+            min-width: 100px;
+        }
+        
+        .search-input::placeholder {
+            color: #9ca3af;
         }
         
         .search-btn {
             background: linear-gradient(135deg, #f59e0b, #d97706);
             border: none;
-            padding: 0 20px;
+            padding: 10px 20px;
             color: white;
             cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            min-width: 50px;
+        }
+        
+        .search-btn:hover {
+            background: linear-gradient(135deg, #d97706, #b45309);
+        }
+        
+        .search-btn i {
+            font-size: 1rem;
         }
         
         .header-actions {
@@ -266,23 +305,27 @@ $is_seller = ($user['role'] ?? '') === 'seller';
             display: flex;
             align-items: center;
             justify-content: center;
+            transition: all 0.3s ease;
         }
         
         .action-btn:hover {
-            background: rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.25);
+            transform: scale(1.05);
         }
         
         .badge-count {
             position: absolute;
             top: -5px;
             right: -5px;
-            background: #f59e0b;
+            background: #ef4444;
             color: white;
-            font-size: 0.65rem;
+            font-size: 0.6rem;
             font-weight: bold;
-            padding: 2px 5px;
+            padding: 2px 6px;
             border-radius: 50%;
             min-width: 18px;
+            text-align: center;
+            box-shadow: 0 2px 6px rgba(239, 68, 68, 0.4);
         }
         
         .custom-dropdown {
@@ -301,6 +344,7 @@ $is_seller = ($user['role'] ?? '') === 'seller';
             cursor: pointer;
             border: none;
             font-size: 0.8rem;
+            transition: all 0.3s ease;
         }
         
         .custom-dropdown-btn:hover {
@@ -347,7 +391,7 @@ $is_seller = ($user['role'] ?? '') === 'seller';
             font-size: 0.85rem;
         }
         .logout {
-            color: red;
+            color: #ef4444;
         }
         
         .custom-dropdown-menu a:hover {
@@ -401,10 +445,12 @@ $is_seller = ($user['role'] ?? '') === 'seller';
             text-decoration: none;
             font-size: 0.8rem;
             font-weight: 500;
+            transition: all 0.3s ease;
         }
         
         .nav-links li a:hover {
             color: white;
+            background: rgba(255, 255, 255, 0.05);
         }
         
         .mobile-menu-btn {
@@ -416,6 +462,11 @@ $is_seller = ($user['role'] ?? '') === 'seller';
             border-radius: 10px;
             color: white;
             cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .mobile-menu-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
         }
         
         .mobile-sidebar {
@@ -468,6 +519,7 @@ $is_seller = ($user['role'] ?? '') === 'seller';
             text-decoration: none;
             border-radius: 10px;
             font-size: 0.85rem;
+            transition: all 0.3s ease;
         }
         
         .sidebar-menu a:hover {
@@ -532,22 +584,137 @@ $is_seller = ($user['role'] ?? '') === 'seller';
             border: none;
         }
         
+        /* ============================================
+           RESPONSIVE
+        ============================================ */
+        @media (max-width: 1200px) {
+            .search-wrapper {
+                max-width: 350px;
+            }
+        }
+        
         @media (max-width: 992px) {
-            .search-wrapper { max-width: 280px; }
-            .user-name { display: none; }
-            .nav-links { display: none; }
-            .mobile-menu-btn { display: flex; align-items: center; justify-content: center; }
+            .search-wrapper { 
+                max-width: 280px; 
+            }
+            .user-name { 
+                display: none; 
+            }
+            .nav-links { 
+                display: none; 
+            }
+            .mobile-menu-btn { 
+                display: flex; 
+                align-items: center; 
+                justify-content: center; 
+            }
+            .search-category {
+                min-width: 100px;
+                font-size: 0.7rem;
+                padding: 8px 10px;
+            }
+            .search-input {
+                font-size: 0.8rem;
+                padding: 8px 12px;
+            }
+            .search-btn {
+                padding: 8px 14px;
+                font-size: 0.85rem;
+                min-width: 40px;
+            }
         }
         
         @media (max-width: 768px) {
-            .search-wrapper { max-width: 100%; margin: 12px 0; }
-            .top-bar { display: none; }
-            .navbar-main .row { flex-direction: column; }
-            .brand-logo { margin-bottom: 10px; justify-content: center; }
-            .header-actions { justify-content: center; margin-top: 10px; }
-            .brand-text h1 { font-size: 1.1rem; }
-            .brand-icon { width: 36px; height: 36px; }
-            .brand-icon i { font-size: 1.2rem; }
+            .search-wrapper { 
+                max-width: 100%; 
+                margin: 12px 0; 
+            }
+            .top-bar { 
+                display: none; 
+            }
+            .navbar-main .row { 
+                flex-direction: column; 
+            }
+            .brand-logo { 
+                margin-bottom: 10px; 
+                justify-content: center; 
+            }
+            .header-actions { 
+                justify-content: center; 
+                margin-top: 10px; 
+            }
+            .brand-text h1 { 
+                font-size: 1.1rem; 
+            }
+            .brand-icon { 
+                width: 36px; 
+                height: 36px; 
+            }
+            .brand-icon i { 
+                font-size: 1.2rem; 
+            }
+            .search-category {
+                min-width: 80px;
+                font-size: 0.65rem;
+                padding: 6px 8px;
+            }
+            .search-input {
+                font-size: 0.75rem;
+                padding: 6px 10px;
+            }
+            .search-btn {
+                padding: 6px 12px;
+                font-size: 0.75rem;
+                min-width: 36px;
+            }
+            .search-box {
+                border-radius: 30px;
+            }
+            .custom-dropdown-btn {
+                padding: 4px 10px;
+                font-size: 0.7rem;
+            }
+            .action-btn {
+                width: 34px;
+                height: 34px;
+                font-size: 0.85rem;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .search-category {
+                min-width: 60px;
+                font-size: 0.6rem;
+                padding: 4px 6px;
+            }
+            .search-category option {
+                font-size: 0.6rem;
+            }
+            .search-input {
+                font-size: 0.7rem;
+                padding: 4px 8px;
+            }
+            .search-btn {
+                padding: 4px 10px;
+                font-size: 0.7rem;
+                min-width: 30px;
+            }
+            .search-btn i {
+                font-size: 0.7rem;
+            }
+            .brand-text h1 {
+                font-size: 0.9rem;
+            }
+            .brand-text span {
+                font-size: 0.5rem;
+            }
+            .brand-icon {
+                width: 30px;
+                height: 30px;
+            }
+            .brand-icon i {
+                font-size: 1rem;
+            }
         }
     </style>
 </head>
@@ -619,16 +786,16 @@ $is_seller = ($user['role'] ?? '') === 'seller';
                 
                 <div class="col-lg-3 col-md-12">
                     <div class="header-actions">
-                        <button class="action-btn" onclick="window.location.href='<?= BASE_URL ?>wishlist.php'">
+                        <button class="action-btn" onclick="window.location.href='<?= BASE_URL ?>wishlist.php'" title="Wishlist">
                             <i class="fa-regular fa-heart"></i>
                         </button>
-                        <button class="action-btn" onclick="window.location.href='<?= BASE_URL ?>cart.php'">
+                        <button class="action-btn" onclick="window.location.href='<?= BASE_URL ?>cart.php'" title="Cart">
                             <i class="fa-solid fa-bag-shopping"></i>
                             <span class="badge-count" id="cartCount"><?= $cart_count ?></span>
                         </button>
                         
                         <?php if (!$is_logged_in): ?>
-                            <button class="action-btn" onclick="window.location.href='<?= BASE_URL ?>login.php'">
+                            <button class="action-btn" onclick="window.location.href='<?= BASE_URL ?>login.php'" title="Login">
                                 <i class="fa-regular fa-user"></i>
                             </button>
                         <?php else: ?>
